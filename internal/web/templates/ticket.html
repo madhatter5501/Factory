@@ -1,0 +1,249 @@
+{{define "ticket.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">&#9881;</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">
+                    <span class="nav-icon">&#128203;</span> Board
+                </a></li>
+                <li><a href="/agents">
+                    <span class="nav-icon">&#129302;</span> Agents
+                </a></li>
+                <li><a href="/settings">
+                    <span class="nav-icon">&#9881;</span> Settings
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/new" class="btn btn-primary">+ New Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            <div class="ticket-detail">
+                <div class="ticket-detail-header">
+                    <a href="/" class="back-link">&larr; Back to Board</a>
+                    <div class="ticket-status-badge status-{{.Ticket.Status | statusColor}}">
+                        {{.Ticket.Status}}
+                    </div>
+                </div>
+
+                <div class="ticket-main">
+                    <div class="ticket-info">
+                        <h1>{{.Ticket.Title}}</h1>
+
+                        <div class="ticket-meta">
+                            <span class="domain-badge domain-{{.Ticket.Domain}}">{{.Ticket.Domain}}</span>
+                            {{if .Ticket.Priority}}
+                            <span class="priority priority-{{.Ticket.Priority}}">Priority {{.Ticket.Priority}}</span>
+                            {{end}}
+                            {{if .Ticket.Type}}
+                            <span class="type-badge">{{.Ticket.Type}}</span>
+                            {{end}}
+                        </div>
+
+                        {{if .Ticket.Description}}
+                        <div class="section">
+                            <h2>Description</h2>
+                            <p>{{.Ticket.Description}}</p>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.AcceptanceCriteria}}
+                        <div class="section">
+                            <h2>Acceptance Criteria</h2>
+                            <ul class="criteria-list">
+                                {{range .Ticket.AcceptanceCriteria}}
+                                <li>{{.}}</li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Requirements}}
+                        <div class="section">
+                            <h2>Requirements Analysis</h2>
+                            {{with .Ticket.Requirements}}
+                                {{if .PMAnalysis}}
+                                <div class="subsection">
+                                    <h3>PM Analysis</h3>
+                                    <p>{{.PMAnalysis}}</p>
+                                </div>
+                                {{end}}
+
+                                {{if .TechnicalNotes}}
+                                <div class="subsection">
+                                    <h3>Technical Notes</h3>
+                                    <p>{{.TechnicalNotes}}</p>
+                                </div>
+                                {{end}}
+
+                                {{if .Questions}}
+                                <div class="subsection questions-section">
+                                    <h3>Questions for User</h3>
+                                    {{range $i, $q := .Questions}}
+                                    <div class="question-item {{if $q.Answer}}answered{{end}}">
+                                        <div class="question-text">
+                                            <strong>Q{{add $i 1}}:</strong> {{$q.Question}}
+                                        </div>
+                                        {{if $q.Answer}}
+                                        <div class="answer-text">
+                                            <strong>A:</strong> {{$q.Answer}}
+                                        </div>
+                                        {{else}}
+                                        <form class="answer-form"
+                                              hx-post="/api/tickets/{{$.Ticket.ID}}/answer"
+                                              hx-swap="none"
+                                              hx-on::after-request="window.location.reload()">
+                                            <input type="hidden" name="questionIndex" value="{{$i}}">
+                                            <textarea name="answer" placeholder="Your answer..." rows="2" required></textarea>
+                                            <button type="submit" class="btn btn-primary btn-sm">Submit Answer</button>
+                                        </form>
+                                        {{end}}
+                                    </div>
+                                    {{end}}
+                                </div>
+                                {{end}}
+
+                                {{if .FinalDescription}}
+                                <div class="subsection">
+                                    <h3>Final Description</h3>
+                                    <p>{{.FinalDescription}}</p>
+                                </div>
+                                {{end}}
+
+                                {{if .FinalCriteria}}
+                                <div class="subsection">
+                                    <h3>Final Acceptance Criteria</h3>
+                                    <ul>
+                                        {{range .FinalCriteria}}
+                                        <li>{{.}}</li>
+                                        {{end}}
+                                    </ul>
+                                </div>
+                                {{end}}
+                            {{end}}
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Bugs}}
+                        <div class="section">
+                            <h2>Bugs Found</h2>
+                            <ul class="bug-list">
+                                {{range .Ticket.Bugs}}
+                                <li class="bug-item severity-{{.Severity}}">
+                                    <span class="bug-severity">{{.Severity}}</span>
+                                    <span class="bug-desc">{{.Description}}</span>
+                                    {{if .File}}
+                                    <span class="bug-file">{{.File}}:{{.Line}}</span>
+                                    {{end}}
+                                </li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Files}}
+                        <div class="section">
+                            <h2>Related Files</h2>
+                            <ul class="file-list">
+                                {{range .Ticket.Files}}
+                                <li>{{.}}</li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <div class="ticket-sidebar">
+                        {{if eq .Ticket.Status "AWAITING_USER"}}
+                        <div class="action-panel">
+                            <h3>Ready to Proceed?</h3>
+                            <p>Review the requirements and approve when ready.</p>
+                            <button class="btn btn-success btn-lg"
+                                    hx-post="/api/tickets/{{.Ticket.ID}}/ready"
+                                    hx-swap="none"
+                                    hx-on::after-request="window.location.reload()">
+                                &#10003; Approve &amp; Move to Ready
+                            </button>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.AssignedAgent}}
+                        <div class="agent-panel">
+                            <h3>Assigned Agent</h3>
+                            <p>&#129302; {{.Ticket.AssignedAgent}}</p>
+                        </div>
+                        {{end}}
+
+                        <div class="signoffs-panel">
+                            <h3>Sign-offs</h3>
+                            <ul class="signoff-list">
+                                <li class="{{if .Ticket.Signoffs.Dev}}signed{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.Dev}}&#10003;{{else}}&#9675;{{end}}</span>
+                                    Dev
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.QA}}signed{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.QA}}&#10003;{{else}}&#9675;{{end}}</span>
+                                    QA
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.UX}}signed{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.UX}}&#10003;{{else}}&#9675;{{end}}</span>
+                                    UX
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.Security}}signed{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.Security}}&#10003;{{else}}&#9675;{{end}}</span>
+                                    Security
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.PM}}signed{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.PM}}&#10003;{{else}}&#9675;{{end}}</span>
+                                    PM
+                                </li>
+                            </ul>
+                        </div>
+
+                        {{if .Ticket.History}}
+                        <div class="history-panel">
+                            <h3>History</h3>
+                            <ul class="history-list">
+                                {{range .Ticket.History}}
+                                <li>
+                                    <span class="history-status status-{{.Status | statusColor}}">{{.Status}}</span>
+                                    <span class="history-by">by {{.By}}</span>
+                                    <span class="history-time">{{.At | timeAgo}}</span>
+                                    {{if .Note}}
+                                    <p class="history-note">{{.Note}}</p>
+                                    {{end}}
+                                </li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Worktree}}
+                        <div class="worktree-panel">
+                            <h3>Worktree</h3>
+                            <p><strong>Branch:</strong> {{.Ticket.Worktree.Branch}}</p>
+                            <p><strong>Path:</strong> {{.Ticket.Worktree.Path}}</p>
+                            <p><strong>Active:</strong> {{if .Ticket.Worktree.Active}}Yes{{else}}No{{end}}</p>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+{{end}}

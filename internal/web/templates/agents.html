@@ -1,0 +1,91 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<div class="agents-page">
+    <h1>Agent Status</h1>
+
+    <div class="agents-grid">
+        <div class="agent-section">
+            <h2>Active Runs</h2>
+            {{if .Runs}}
+            <div class="runs-list">
+                {{range .Runs}}
+                <div class="run-card run-{{.Status}}">
+                    <div class="run-header">
+                        <span class="agent-name">🤖 {{.Agent}}</span>
+                        <span class="run-status status-{{.Status}}">{{.Status}}</span>
+                    </div>
+                    <div class="run-body">
+                        <p><strong>Ticket:</strong> {{.TicketID}}</p>
+                        {{if .Worktree}}
+                        <p><strong>Worktree:</strong> {{.Worktree}}</p>
+                        {{end}}
+                        <p><strong>Started:</strong> {{.StartedAt | timeAgo}}</p>
+                    </div>
+                    {{if .Output}}
+                    <div class="run-output">
+                        <pre>{{.Output}}</pre>
+                    </div>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+            {{else}}
+            <div class="empty-state">
+                <p>No active agent runs.</p>
+            </div>
+            {{end}}
+        </div>
+
+        <div class="agent-section">
+            <h2>Background Agents</h2>
+            <div class="background-agents">
+                <div class="agent-status-card">
+                    <span class="agent-icon">📋</span>
+                    <div class="agent-info">
+                        <h3>PM Agent</h3>
+                        <p>Analyzes requirements, asks questions, validates tickets</p>
+                    </div>
+                    <span class="status-indicator active"></span>
+                </div>
+
+                <div class="agent-status-card">
+                    <span class="agent-icon">🔒</span>
+                    <div class="agent-info">
+                        <h3>Security Agent</h3>
+                        <p>Reviews code for security issues</p>
+                    </div>
+                    <span class="status-indicator active"></span>
+                </div>
+
+                <div class="agent-status-card">
+                    <span class="agent-icon">📦</span>
+                    <div class="agent-info">
+                        <h3>Gatherer Agent</h3>
+                        <p>Collects context and relevant files</p>
+                    </div>
+                    <span class="status-indicator active"></span>
+                </div>
+
+                <div class="agent-status-card">
+                    <span class="agent-icon">💻</span>
+                    <div class="agent-info">
+                        <h3>Dev Agent</h3>
+                        <p>Implements features and fixes bugs</p>
+                    </div>
+                    <span class="status-indicator idle"></span>
+                </div>
+
+                <div class="agent-status-card">
+                    <span class="agent-icon">🧪</span>
+                    <div class="agent-info">
+                        <h3>QA Agent</h3>
+                        <p>Tests implementations</p>
+                    </div>
+                    <span class="status-indicator idle"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

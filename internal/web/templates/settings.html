@@ -1,0 +1,65 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<div class="settings-page">
+    <h1>Settings</h1>
+
+    <form class="settings-form" hx-patch="/api/settings" hx-swap="none">
+        <div class="settings-section">
+            <h2>Git Configuration</h2>
+
+            <div class="form-group">
+                <label for="worktree_dir">Worktree Directory</label>
+                <input type="text" id="worktree_dir" name="worktree_dir"
+                       value="{{index .Config "worktree_dir"}}">
+                <p class="help-text">Directory where git worktrees are created</p>
+            </div>
+
+            <div class="form-group">
+                <label for="main_branch">Main Branch</label>
+                <input type="text" id="main_branch" name="main_branch"
+                       value="{{index .Config "main_branch"}}">
+                <p class="help-text">The main branch to merge into</p>
+            </div>
+
+            <div class="form-group">
+                <label for="branch_prefix">Branch Prefix</label>
+                <input type="text" id="branch_prefix" name="branch_prefix"
+                       value="{{index .Config "branch_prefix"}}">
+                <p class="help-text">Prefix for feature branches (e.g., feat/, feature/)</p>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="squash_on_merge"
+                           {{if eq (index .Config "squash_on_merge") "true"}}checked{{end}}>
+                    Squash commits on merge
+                </label>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Agent Configuration</h2>
+
+            <div class="form-group">
+                <label for="max_parallel_agents">Max Parallel Agents</label>
+                <input type="number" id="max_parallel_agents" name="max_parallel_agents"
+                       value="{{index .Config "max_parallel_agents"}}" min="1" max="10">
+                <p class="help-text">Maximum number of agents running simultaneously</p>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="require_all_signoffs"
+                           {{if eq (index .Config "require_all_signoffs") "true"}}checked{{end}}>
+                    Require all sign-offs before completion
+                </label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+    </form>
+</div>
+{{end}}

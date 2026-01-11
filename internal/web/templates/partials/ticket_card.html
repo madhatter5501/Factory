@@ -1,0 +1,30 @@
+{{define "partials/ticket_card.html"}}
+<div class="ticket-card" onclick="window.location='/tickets/{{.ID}}'">
+    <div class="ticket-header">
+        <span class="domain-badge domain-{{.Domain}}">{{.Domain}}</span>
+        {{if .Priority}}
+        <span class="priority priority-{{.Priority}}">P{{.Priority}}</span>
+        {{end}}
+    </div>
+    <h3 class="ticket-title">{{.Title}}</h3>
+    {{if .Description}}
+    <p class="ticket-desc">{{.Description}}</p>
+    {{end}}
+    <div class="ticket-footer">
+        {{if .AssignedAgent}}
+        <span class="agent-badge">🤖 {{.AssignedAgent}}</span>
+        {{end}}
+        <span class="time-ago">{{.UpdatedAt | timeAgo}}</span>
+    </div>
+    {{if eq .Status "AWAITING_USER"}}
+    <div class="ticket-actions">
+        <button class="btn btn-success btn-sm"
+                hx-post="/partials/tickets/{{.ID}}/ready"
+                hx-swap="outerHTML"
+                onclick="event.stopPropagation()">
+            ✓ Approve
+        </button>
+    </div>
+    {{end}}
+</div>
+{{end}}

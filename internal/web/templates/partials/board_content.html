@@ -1,0 +1,19 @@
+{{define "partials/board_content.html"}}
+<div class="columns">
+    {{range .Columns}}
+    {{if .Tickets}}
+    <div class="column column-{{.Status | statusColor}}">
+        <div class="column-header">
+            <h2>{{.Name}}</h2>
+            <span class="ticket-count">{{len .Tickets}}</span>
+        </div>
+        <div class="ticket-list">
+            {{range .Tickets}}
+            {{template "ticket_card" .}}
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+    {{end}}
+</div>
+{{end}}
