@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/arctek/factory"
-	"github.com/arctek/factory/internal/db"
-	"github.com/arctek/factory/internal/web"
-	"github.com/arctek/factory/kanban"
+	"github.com/madhatter5501/Factory"
+	"github.com/madhatter5501/Factory/internal/db"
+	"github.com/madhatter5501/Factory/internal/web"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 var (

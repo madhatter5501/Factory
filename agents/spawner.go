@@ -14,7 +14,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/arctek/factory/kanban"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // AgentType represents the type of agent.

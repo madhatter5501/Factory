@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arctek/factory/internal/db"
+	"github.com/madhatter5501/Factory/internal/db"
 )
 
 //go:embed templates/*

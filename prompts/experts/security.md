@@ -161,7 +161,7 @@ tenant-{id}-guacamole-key
 var connectionString = "Server=...;Password=supersecret";
 
 // ✅ Always from configuration
-var connectionString = _config.GetConnectionString("CloudControl");
+var connectionString = _config.GetConnectionString("DefaultConnection");
 ```
 
 ## Input Validation

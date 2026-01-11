@@ -3,7 +3,7 @@ package web
 import (
 	"net/http"
 
-	"github.com/arctek/factory/kanban"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // partialBoard returns just the board content for htmx refresh.

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/arctek/factory/agents/anthropic"
-	"github.com/arctek/factory/agents/rag"
-	"github.com/arctek/factory/kanban"
+	"github.com/madhatter5501/Factory/agents/anthropic"
+	"github.com/madhatter5501/Factory/agents/rag"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // APISpawner manages agent spawning via direct Anthropic API calls with prompt caching.

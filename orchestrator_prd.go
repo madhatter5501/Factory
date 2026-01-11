@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arctek/factory/agents"
-	"github.com/arctek/factory/kanban"
+	"github.com/madhatter5501/Factory/agents"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // PRD Collaboration Constants

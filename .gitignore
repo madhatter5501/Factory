@@ -1,0 +1,34 @@
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test coverage
+*.out
+coverage.html
+
+# Database files
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Worktrees directory (created at runtime)
+.worktrees/
+
+# Temporary files
+tmp/
+*.tmp
+*.log
+
+# RAG vector database
+rag.db

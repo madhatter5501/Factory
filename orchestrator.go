@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arctek/factory/agents"
-	"github.com/arctek/factory/git"
-	"github.com/arctek/factory/kanban"
+	"github.com/madhatter5501/Factory/agents"
+	"github.com/madhatter5501/Factory/git"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // Orchestrator coordinates the AI development factory.
