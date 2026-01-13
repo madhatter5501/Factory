@@ -1272,7 +1272,7 @@ func readDefaultPrompt(agentType string) string {
 
 	// Try to read from the prompts directory
 	promptPath := fmt.Sprintf("prompts/%s.md", agentType) // #nosec G304 -- agentType validated above
-	content, err := os.ReadFile(promptPath)              // #nosec G304 -- path constructed from validated agentType
+	content, err := os.ReadFile(promptPath)               // #nosec G304 -- path constructed from validated agentType
 	if err != nil {
 		return "" // No default prompt file found
 	}
