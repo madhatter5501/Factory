@@ -121,14 +121,14 @@ func (m *WorktreeManager) RemoveWorktree(worktreePath string, removeBranch bool)
 	// Remove worktree
 	if err := m.runGit(m.repoRoot, "worktree", "remove", "--force", worktreePath); err != nil {
 		// Try manual removal if git worktree remove fails
-		if err := os.RemoveAll(worktreePath); err != nil {
-			return fmt.Errorf("failed to remove worktree directory: %w", err)
+		if rmErr := os.RemoveAll(worktreePath); rmErr != nil {
+			return fmt.Errorf("failed to remove worktree directory: %w", rmErr)
 		}
-		// Prune worktrees
+		// Prune worktrees (ignore error - best effort cleanup)
 		_ = m.runGit(m.repoRoot, "worktree", "prune")
 	}
 
-	// Remove branch if requested
+	// Remove branch if requested (ignore error - best effort cleanup)
 	if removeBranch && branchName != "" && branchName != m.mainBranch {
 		_ = m.runGit(m.repoRoot, "branch", "-D", branchName)
 	}
@@ -184,9 +184,15 @@ func (m *WorktreeManager) GetWorktreeInfo(worktreePath string) (*WorktreeInfo, e
 		return nil, err
 	}
 
-	absPath, _ := filepath.Abs(worktreePath)
+	absPath, err := filepath.Abs(worktreePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolute path: %w", err)
+	}
 	for _, wt := range worktrees {
-		wtAbs, _ := filepath.Abs(wt.Path)
+		wtAbs, err := filepath.Abs(wt.Path)
+		if err != nil {
+			continue // Skip worktrees with invalid paths
+		}
 		if wtAbs == absPath {
 			return &wt, nil
 		}
@@ -322,11 +328,6 @@ func (m *WorktreeManager) GetLatestCommit(worktreePath string) (string, error) {
 // CleanupOrphanedWorktrees removes worktrees that are no longer tracked.
 func (m *WorktreeManager) CleanupOrphanedWorktrees() error {
 	return m.runGit(m.repoRoot, "worktree", "prune")
-}
-
-// branchExists checks if a branch exists locally or remotely.
-func (m *WorktreeManager) branchExists(branchName string) bool {
-	return m.branchExistsIn(m.repoRoot, branchName)
 }
 
 // branchExistsIn checks if a branch exists in a specific repo.

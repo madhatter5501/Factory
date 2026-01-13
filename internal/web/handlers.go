@@ -470,7 +470,7 @@ func (s *Server) apiUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(`{"id":"` + attID + `"}`))
+	_, _ = w.Write([]byte(`{"id":"` + attID + `"}`))
 }
 
 // apiGetAttachment serves an attachment file.
@@ -506,7 +506,7 @@ func (s *Server) apiGetAttachment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "inline; filename=\""+att.Filename+"\"")
 
 	// Serve the file
-	io.Copy(w, file)
+	_, _ = io.Copy(w, file)
 }
 
 // --- ADR (Architecture Decision Records) API Handlers ---

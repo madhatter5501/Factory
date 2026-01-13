@@ -157,7 +157,7 @@ func (m *BackgroundAgentManager) getWorktreeConfig(store WorktreeStore) Worktree
 // 2. Attempts squash merge to main
 // 3. Pushes to remote
 // 4. Notifies QA on success
-// 5. Handles failures with retry or escalation
+// 5. Handles failures with retry or escalation.
 func (m *BackgroundAgentManager) processMergeQueue(ctx context.Context, store WorktreeStore, config WorktreeManagerConfig) error {
 	pendingMerges, err := store.GetPendingMerges()
 	if err != nil {
@@ -172,7 +172,7 @@ func (m *BackgroundAgentManager) processMergeQueue(ctx context.Context, store Wo
 		}
 
 		// Log merge start event
-		store.LogWorktreeEvent(kanban.WorktreeEvent{
+		_ = store.LogWorktreeEvent(kanban.WorktreeEvent{
 			ID:        fmt.Sprintf("evt-%s-%d", merge.TicketID, time.Now().UnixNano()),
 			TicketID:  merge.TicketID,
 			EventType: kanban.WorktreeEventMergeStarted,
@@ -200,7 +200,7 @@ func (m *BackgroundAgentManager) processMergeQueue(ctx context.Context, store Wo
 				}
 
 				// Log failure event
-				store.LogWorktreeEvent(kanban.WorktreeEvent{
+				_ = store.LogWorktreeEvent(kanban.WorktreeEvent{
 					ID:        fmt.Sprintf("evt-%s-%d", merge.TicketID, time.Now().UnixNano()),
 					TicketID:  merge.TicketID,
 					EventType: kanban.WorktreeEventMergeFailed,
@@ -212,7 +212,7 @@ func (m *BackgroundAgentManager) processMergeQueue(ctx context.Context, store Wo
 				m.createMergeFailureConversation(store, merge.TicketID, mergeErr.Error())
 
 				// Update ticket status to BLOCKED
-				store.UpdateTicketStatus(merge.TicketID, kanban.StatusBlocked, "WorktreeManager", "Merge to main failed after multiple attempts")
+				_ = store.UpdateTicketStatus(merge.TicketID, kanban.StatusBlocked, "WorktreeManager", "Merge to main failed after multiple attempts")
 
 				// Broadcast SSE event
 				if m.orchestrator.state != nil {
@@ -242,10 +242,10 @@ func (m *BackgroundAgentManager) processMergeQueue(ctx context.Context, store Wo
 			}
 
 			// Update worktree pool status
-			store.UpdateWorktreeStatus(merge.TicketID, kanban.WorktreePoolStatusMerging)
+			_ = store.UpdateWorktreeStatus(merge.TicketID, kanban.WorktreePoolStatusMerging)
 
 			// Log success event
-			store.LogWorktreeEvent(kanban.WorktreeEvent{
+			_ = store.LogWorktreeEvent(kanban.WorktreeEvent{
 				ID:        fmt.Sprintf("evt-%s-%d", merge.TicketID, time.Now().UnixNano()),
 				TicketID:  merge.TicketID,
 				EventType: kanban.WorktreeEventMergeCompleted,
@@ -345,7 +345,7 @@ func (m *BackgroundAgentManager) detectDevSignoffs(ctx context.Context, store Wo
 			"branch", ticket.Worktree.Branch)
 
 		// Log event
-		store.LogWorktreeEvent(kanban.WorktreeEvent{
+		_ = store.LogWorktreeEvent(kanban.WorktreeEvent{
 			ID:        fmt.Sprintf("evt-%s-%d", ticket.ID, time.Now().UnixNano()),
 			TicketID:  ticket.ID,
 			EventType: kanban.WorktreeEventMergeStarted,
@@ -382,7 +382,7 @@ func (m *BackgroundAgentManager) enforceWorktreeLimits(ctx context.Context, stor
 				"waiting", len(readyTickets))
 
 			// Log limit enforcement event for first waiting ticket
-			store.LogWorktreeEvent(kanban.WorktreeEvent{
+			_ = store.LogWorktreeEvent(kanban.WorktreeEvent{
 				ID:        fmt.Sprintf("evt-limit-%d", time.Now().UnixNano()),
 				TicketID:  readyTickets[0].ID,
 				EventType: kanban.WorktreeEventLimitEnforced,
@@ -423,7 +423,7 @@ func (m *BackgroundAgentManager) cleanupCompletedWorktrees(ctx context.Context, 
 		ticket, found := store.GetTicket(entry.TicketID)
 		if !found {
 			// Ticket not found, remove from pool
-			store.RemoveFromPool(entry.TicketID)
+			_ = store.RemoveFromPool(entry.TicketID)
 			continue
 		}
 
@@ -447,7 +447,7 @@ func (m *BackgroundAgentManager) cleanupCompletedWorktrees(ctx context.Context, 
 		}
 
 		// Log cleanup event
-		store.LogWorktreeEvent(kanban.WorktreeEvent{
+		_ = store.LogWorktreeEvent(kanban.WorktreeEvent{
 			ID:        fmt.Sprintf("evt-%s-%d", entry.TicketID, time.Now().UnixNano()),
 			TicketID:  entry.TicketID,
 			EventType: kanban.WorktreeEventCleanedUp,
@@ -605,7 +605,7 @@ func (m *BackgroundAgentManager) RegisterDevWorktree(ticketID, branch, path, age
 	}
 
 	// Log creation event
-	worktreeStore.LogWorktreeEvent(kanban.WorktreeEvent{
+	_ = worktreeStore.LogWorktreeEvent(kanban.WorktreeEvent{
 		ID:        fmt.Sprintf("evt-%s-%d", ticketID, time.Now().UnixNano()),
 		TicketID:  ticketID,
 		EventType: kanban.WorktreeEventCreated,

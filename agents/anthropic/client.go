@@ -18,13 +18,15 @@ const (
 	DefaultAPIVersion = "2023-06-01"
 	DefaultModel      = "claude-sonnet-4-20250514"
 
-	// Prompt caching requires beta header
+	// PromptCachingBeta is the beta header required for prompt caching.
 	PromptCachingBeta = "prompt-caching-2024-07-31"
 
-	// Model constants for consistent usage across the codebase
-	ModelSonnet4 = "claude-sonnet-4-20250514"    // Primary model - best quality/cost balance
-	ModelHaiku35 = "claude-3-5-haiku-20241022"   // Fast, cheap model for simple tasks
-	ModelOpus45  = "claude-opus-4-5-20251101"    // Most capable, use sparingly
+	// ModelSonnet4 is the primary model with best quality/cost balance.
+	ModelSonnet4 = "claude-sonnet-4-20250514"
+	// ModelHaiku35 is a fast, cheap model for simple tasks.
+	ModelHaiku35 = "claude-3-5-haiku-20241022"
+	// ModelOpus45 is the most capable model, use sparingly.
+	ModelOpus45 = "claude-opus-4-5-20251101"
 )
 
 // Client provides access to the Anthropic API with prompt caching support.
@@ -111,7 +113,7 @@ func NewClientFromEnv(opts ...ClientOption) (*Client, error) {
 
 // Message represents a conversation message.
 type Message struct {
-	Role    string        `json:"role"` // "user" or "assistant"
+	Role    string         `json:"role"` // "user" or "assistant"
 	Content []ContentBlock `json:"content"`
 }
 
@@ -150,10 +152,10 @@ type SystemBlock struct {
 
 // CreateMessageRequest is the request body for creating a message.
 type CreateMessageRequest struct {
-	Model     string         `json:"model"`
-	MaxTokens int            `json:"max_tokens"`
-	System    []SystemBlock  `json:"system,omitempty"`
-	Messages  []Message      `json:"messages"`
+	Model     string        `json:"model"`
+	MaxTokens int           `json:"max_tokens"`
+	System    []SystemBlock `json:"system,omitempty"`
+	Messages  []Message     `json:"messages"`
 
 	// Optional
 	Temperature   *float64 `json:"temperature,omitempty"`

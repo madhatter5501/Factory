@@ -43,11 +43,11 @@ type SpawnerFactory struct {
 
 // SpawnerConfig configures the spawner factory.
 type SpawnerConfig struct {
-	Mode         SpawnerMode   `json:"mode"`
-	PromptsDir   string        `json:"prompts_dir"`
-	Timeout      time.Duration `json:"timeout"`
-	Verbose      bool          `json:"verbose"`
-	Model        string        `json:"model,omitempty"`
+	Mode       SpawnerMode   `json:"mode"`
+	PromptsDir string        `json:"prompts_dir"`
+	Timeout    time.Duration `json:"timeout"`
+	Verbose    bool          `json:"verbose"`
+	Model      string        `json:"model,omitempty"`
 
 	// API mode settings
 	RAGEnabled   bool   `json:"rag_enabled"`

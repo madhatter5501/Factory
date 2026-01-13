@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // PromptBuilder constructs prompts optimized for caching.
@@ -17,9 +20,9 @@ type PromptBuilder struct {
 	funcMap    template.FuncMap
 
 	// Cached prompt segments (loaded once, reused across requests)
-	sharedRules   string
+	sharedRules     string
 	expertKnowledge map[string]string // domain -> knowledge
-	outputSchemas map[string]string   // agent type -> schema
+	outputSchemas   map[string]string // agent type -> schema
 }
 
 // NewPromptBuilder creates a prompt builder with cached static content.
@@ -29,7 +32,7 @@ func NewPromptBuilder(promptsDir string) (*PromptBuilder, error) {
 		expertKnowledge: make(map[string]string),
 		outputSchemas:   make(map[string]string),
 		funcMap: template.FuncMap{
-			"title": strings.Title,
+			"title": cases.Title(language.English).String,
 			"upper": strings.ToUpper,
 			"lower": strings.ToLower,
 			"join":  strings.Join,
@@ -52,8 +55,10 @@ func NewPromptBuilder(promptsDir string) (*PromptBuilder, error) {
 		for _, entry := range entries {
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
 				domain := strings.TrimSuffix(entry.Name(), ".md")
-				content, _ := os.ReadFile(filepath.Join(expertsDir, entry.Name()))
-				pb.expertKnowledge[domain] = string(content)
+				content, err := os.ReadFile(filepath.Join(expertsDir, entry.Name()))
+				if err == nil {
+					pb.expertKnowledge[domain] = string(content)
+				}
 			}
 		}
 	}
@@ -149,8 +154,8 @@ func (pb *PromptBuilder) BuildCachedPrompt(agentType string, data AgentPromptDat
 
 	// Add shared rules as cached block
 	if pb.sharedRules != "" && strings.Contains(templateContent, "shared-rules") {
-		sharedRendered, err := pb.renderTemplate(pb.sharedRules, data)
-		if err == nil && sharedRendered != "" {
+		sharedRendered, sharedErr := pb.renderTemplate(pb.sharedRules, data)
+		if sharedErr == nil && sharedRendered != "" {
 			parts.StaticPrefix = append(parts.StaticPrefix, SystemBlock{
 				Type:         "text",
 				Text:         sharedRendered,
@@ -214,7 +219,7 @@ func (pb *PromptBuilder) BuildCachedPrompt(agentType string, data AgentPromptDat
 }
 
 // splitTemplate separates a template into static (cacheable) and dynamic parts.
-func (pb *PromptBuilder) splitTemplate(content, agentType string) (static, dynamic string) {
+func (pb *PromptBuilder) splitTemplate(content, _ string) (static, dynamic string) {
 	// Markers for splitting - anything after these markers is dynamic
 	dynamicMarkers := []string{
 		"## Ticket Context",
@@ -292,8 +297,8 @@ func MinimalTicketJSON(ticket interface{}, agentType string) (string, error) {
 
 	// Parse into map
 	var ticketMap map[string]interface{}
-	if err := json.Unmarshal(full, &ticketMap); err != nil {
-		return "", err
+	if unmarshalErr := json.Unmarshal(full, &ticketMap); unmarshalErr != nil {
+		return "", unmarshalErr
 	}
 
 	// Fields always needed

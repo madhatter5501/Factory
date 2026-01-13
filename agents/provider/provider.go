@@ -82,7 +82,7 @@ type AgentProviderConfig struct {
 }
 
 // ProviderInfo describes an available provider and its models.
-type ProviderInfo struct {
+type ProviderInfo struct { //nolint:revive // keeping explicit name for clarity alongside ModelInfo
 	Name        string      `json:"name"`
 	DisplayName string      `json:"display_name"` // Human-readable name
 	EnvVar      string      `json:"env_var"`      // Environment variable for API key
@@ -131,17 +131,17 @@ func (b *BaseProvider) ResetUsage() {
 
 // Model constants for all providers.
 const (
-	// Anthropic models
+	// Anthropic models.
 	ModelAnthropicSonnet4 = "claude-sonnet-4-20250514"
 	ModelAnthropicHaiku35 = "claude-3-5-haiku-20241022"
 	ModelAnthropicOpus45  = "claude-opus-4-5-20251101"
 
-	// OpenAI models
+	// OpenAI models.
 	ModelOpenAIGPT4o      = "gpt-4o"
 	ModelOpenAIGPT4       = "gpt-4"
 	ModelOpenAIGPT35Turbo = "gpt-3.5-turbo"
 
-	// Google models
+	// Google models.
 	ModelGoogleGemini20Flash = "gemini-2.0-flash"
 	ModelGoogleGemini15Pro   = "gemini-1.5-pro"
 	ModelGoogleGemini15Flash = "gemini-1.5-flash"

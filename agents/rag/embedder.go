@@ -162,9 +162,9 @@ func (e *Embedder) textToHashVector(text string, dimensions int) []float32 {
 
 	for feature, count := range features {
 		hash := sha256.Sum256([]byte(feature))
-		// Use first 4 bytes for index, next 4 for sign
+		// Use first 4 bytes for index, next 4 for sign.
 		idx := int(hash[0])<<8 | int(hash[1])
-		idx = idx % dimensions
+		idx %= dimensions
 		sign := float32(1.0)
 		if hash[4]&1 == 1 {
 			sign = -1.0

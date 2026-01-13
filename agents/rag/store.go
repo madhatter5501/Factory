@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // Register pure-Go SQLite driver.
 )
 
 // VectorStore provides vector storage and similarity search using SQLite.
@@ -23,21 +23,21 @@ type VectorStore struct {
 
 // Chunk represents a stored content chunk with its embedding.
 type Chunk struct {
-	ID         string    `json:"id"`
-	Source     string    `json:"source"`     // file path or "expert:domain"
-	Content    string    `json:"content"`    // the actual text
-	Embedding  []float32 `json:"embedding"`  // vector representation
-	Metadata   Metadata  `json:"metadata"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID        string    `json:"id"`
+	Source    string    `json:"source"`    // file path or "expert:domain"
+	Content   string    `json:"content"`   // the actual text
+	Embedding []float32 `json:"embedding"` // vector representation
+	Metadata  Metadata  `json:"metadata"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Metadata contains additional information about a chunk.
 type Metadata struct {
-	ChunkType   string   `json:"chunk_type"`   // "code", "pattern", "conversation", "expert"
-	Domain      string   `json:"domain"`       // "backend", "frontend", etc.
-	Language    string   `json:"language"`     // "go", "csharp", "typescript"
-	Tags        []string `json:"tags"`         // searchable tags
-	TokenCount  int      `json:"token_count"`  // approximate token count
+	ChunkType  string   `json:"chunk_type"`  // "code", "pattern", "conversation", "expert"
+	Domain     string   `json:"domain"`      // "backend", "frontend", etc.
+	Language   string   `json:"language"`    // "go", "csharp", "typescript"
+	Tags       []string `json:"tags"`        // searchable tags
+	TokenCount int      `json:"token_count"` // approximate token count
 }
 
 // SearchResult represents a similarity search result.
@@ -133,7 +133,7 @@ func (s *VectorStore) StoreBatch(ctx context.Context, chunks []Chunk) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareContext(ctx, `
 		INSERT OR REPLACE INTO chunks (id, source, content, embedding, metadata, created_at)
@@ -145,10 +145,16 @@ func (s *VectorStore) StoreBatch(ctx context.Context, chunks []Chunk) error {
 	defer stmt.Close()
 
 	for _, chunk := range chunks {
-		embeddingJSON, _ := json.Marshal(chunk.Embedding)
-		metadataJSON, _ := json.Marshal(chunk.Metadata)
+		embeddingJSON, err := json.Marshal(chunk.Embedding)
+		if err != nil {
+			return fmt.Errorf("failed to marshal embedding: %w", err)
+		}
+		metadataJSON, err := json.Marshal(chunk.Metadata)
+		if err != nil {
+			return fmt.Errorf("failed to marshal metadata: %w", err)
+		}
 
-		_, err := stmt.ExecContext(ctx, chunk.ID, chunk.Source, chunk.Content,
+		_, err = stmt.ExecContext(ctx, chunk.ID, chunk.Source, chunk.Content,
 			string(embeddingJSON), string(metadataJSON), chunk.CreatedAt)
 		if err != nil {
 			return err
@@ -159,8 +165,8 @@ func (s *VectorStore) StoreBatch(ctx context.Context, chunks []Chunk) error {
 }
 
 // Search performs similarity search on the vector store.
-func (s *VectorStore) Search(ctx context.Context, query []float32, opts SearchOptions) ([]SearchResult, error) {
-	// Build filter clause
+func (s *VectorStore) Search(ctx context.Context, queryVec []float32, opts SearchOptions) ([]SearchResult, error) {
+	// Build filter clause using parameterized queries (safe from SQL injection)
 	var whereClauses []string
 	var args []interface{}
 
@@ -177,20 +183,16 @@ func (s *VectorStore) Search(ctx context.Context, query []float32, opts SearchOp
 		args = append(args, "%"+opts.Source+"%")
 	}
 
-	whereSQL := ""
+	// Build query - the WHERE clause is built from safe static strings only
+	var querySQL string
 	if len(whereClauses) > 0 {
-		whereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
+		querySQL = "SELECT id, source, content, embedding, metadata, created_at FROM chunks WHERE " +
+			strings.Join(whereClauses, " AND ")
+	} else {
+		querySQL = "SELECT id, source, content, embedding, metadata, created_at FROM chunks"
 	}
 
-	// Load all matching chunks (for small-medium datasets)
-	// For large datasets, would use approximate nearest neighbor
-	query_sql := fmt.Sprintf(`
-		SELECT id, source, content, embedding, metadata, created_at
-		FROM chunks
-		%s
-	`, whereSQL)
-
-	rows, err := s.db.QueryContext(ctx, query_sql, args...)
+	rows, err := s.db.QueryContext(ctx, querySQL, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -207,11 +209,15 @@ func (s *VectorStore) Search(ctx context.Context, query []float32, opts SearchOp
 			continue
 		}
 
-		json.Unmarshal([]byte(embeddingJSON), &chunk.Embedding)
-		json.Unmarshal([]byte(metadataJSON), &chunk.Metadata)
+		if err := json.Unmarshal([]byte(embeddingJSON), &chunk.Embedding); err != nil {
+			continue // Skip malformed embeddings
+		}
+		if err := json.Unmarshal([]byte(metadataJSON), &chunk.Metadata); err != nil {
+			continue // Skip malformed metadata
+		}
 
 		// Compute cosine similarity
-		similarity := cosineSimilarity(query, chunk.Embedding)
+		similarity := cosineSimilarity(queryVec, chunk.Embedding)
 
 		if similarity >= opts.MinSimilarity {
 			results = append(results, SearchResult{
@@ -264,7 +270,9 @@ func (s *VectorStore) SearchKeyword(ctx context.Context, keywords string, opts S
 			continue
 		}
 
-		json.Unmarshal([]byte(metadataJSON), &chunk.Metadata)
+		if err := json.Unmarshal([]byte(metadataJSON), &chunk.Metadata); err != nil {
+			continue // Skip malformed metadata
+		}
 		// Don't load embedding for keyword search
 
 		results = append(results, SearchResult{

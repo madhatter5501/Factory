@@ -70,7 +70,7 @@ func (s *State) Save() error {
 
 	// Write atomically
 	tmpFile := s.filePath + ".tmp"
-	if err := os.WriteFile(tmpFile, data, 0644); err != nil {
+	if err := os.WriteFile(tmpFile, data, 0600); err != nil {
 		return fmt.Errorf("failed to write kanban file: %w", err)
 	}
 
@@ -497,7 +497,7 @@ func (s *State) GetActiveRuns() []AgentRun {
 
 	var active []AgentRun
 	for _, run := range s.board.ActiveRuns {
-		if run.Status == "running" {
+		if run.Status == AgentRunStatusRunning {
 			active = append(active, run)
 		}
 	}
@@ -512,7 +512,7 @@ func (s *State) GetActiveDevRuns() []AgentRun {
 
 	var active []AgentRun
 	for _, run := range s.board.ActiveRuns {
-		if run.Status == "running" && isDevAgent(run.Agent) {
+		if run.Status == AgentRunStatusRunning && isDevAgent(run.Agent) {
 			active = append(active, run)
 		}
 	}
@@ -590,7 +590,7 @@ func (s *State) GetActiveRunsForTicket(ticketID string) []AgentRun {
 
 	var result []AgentRun
 	for _, run := range s.board.ActiveRuns {
-		if run.Status == "running" && run.TicketID == ticketID {
+		if run.Status == AgentRunStatusRunning && run.TicketID == ticketID {
 			result = append(result, run)
 		}
 	}
@@ -608,7 +608,7 @@ func (s *State) CleanupStaleRunningAgents(maxRunDuration time.Duration) int {
 
 	for i := range s.board.ActiveRuns {
 		run := &s.board.ActiveRuns[i]
-		if run.Status == "running" && run.StartedAt.Before(cutoff) {
+		if run.Status == AgentRunStatusRunning && run.StartedAt.Before(cutoff) {
 			run.Status = "failed"
 			run.EndedAt = time.Now()
 			run.Output = "Marked as stale - exceeded max run duration"
@@ -632,7 +632,7 @@ func (s *State) CleanupOrphanedRunningAgents() int {
 	count := 0
 	for i := range s.board.ActiveRuns {
 		run := &s.board.ActiveRuns[i]
-		if run.Status == "running" {
+		if run.Status == AgentRunStatusRunning {
 			run.Status = "failed"
 			run.EndedAt = time.Now()
 			run.Output = "Orphaned run from previous factory session"
@@ -652,7 +652,7 @@ func (s *State) IsAgentRunning(ticketID, agentType string) bool {
 	defer s.mu.RUnlock()
 
 	for _, run := range s.board.ActiveRuns {
-		if run.Status == "running" && run.TicketID == ticketID && run.Agent == agentType {
+		if run.Status == AgentRunStatusRunning && run.TicketID == ticketID && run.Agent == agentType {
 			return true
 		}
 	}

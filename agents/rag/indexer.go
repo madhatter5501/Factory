@@ -87,7 +87,7 @@ func (idx *Indexer) IndexExpertPrompts(ctx context.Context, promptsDir string) e
 }
 
 // processExpertPrompt extracts chunks from an expert prompt file.
-func (idx *Indexer) processExpertPrompt(ctx context.Context, path, domain string) ([]Chunk, error) {
+func (idx *Indexer) processExpertPrompt(_ context.Context, path, domain string) ([]Chunk, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -243,10 +243,10 @@ func extractSections(content string) []section {
 }
 
 // IndexConversation indexes a PRD conversation for later retrieval.
-func (idx *Indexer) IndexConversation(ctx context.Context, ticketID string, conversation interface{}) error {
-	// TODO: Implement conversation indexing
+func (idx *Indexer) IndexConversation(_ context.Context, _ string, _ interface{}) error {
+	// TODO: Implement conversation indexing.
 	// This would store expert inputs and PM prompts for retrieval
-	// in subsequent rounds or similar future tickets
+	// in subsequent rounds or similar future tickets.
 	return nil
 }
 

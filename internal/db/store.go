@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,17 +21,27 @@ func NewStore(db *DB) *Store {
 	return &Store{db: db}
 }
 
+// mustMarshal marshals v to JSON, returning nil on error.
+// Used for internal struct serialization that should never fail.
+func mustMarshal(v interface{}) []byte {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil
+	}
+	return data
+}
+
 // --- Ticket Operations ---
 
 // CreateTicket creates a new ticket.
 func (s *Store) CreateTicket(t *kanban.Ticket) error {
-	files, _ := json.Marshal(t.Files)
-	deps, _ := json.Marshal(t.Dependencies)
-	criteria, _ := json.Marshal(t.AcceptanceCriteria)
-	requirements, _ := json.Marshal(t.Requirements)
-	signoffs, _ := json.Marshal(t.Signoffs)
-	bugs, _ := json.Marshal(t.Bugs)
-	conversation, _ := json.Marshal(t.Conversation)
+	files := mustMarshal(t.Files)
+	deps := mustMarshal(t.Dependencies)
+	criteria := mustMarshal(t.AcceptanceCriteria)
+	requirements := mustMarshal(t.Requirements)
+	signoffs := mustMarshal(t.Signoffs)
+	bugs := mustMarshal(t.Bugs)
+	conversation := mustMarshal(t.Conversation)
 
 	_, err := s.db.Exec(`
 		INSERT INTO tickets (
@@ -203,13 +214,13 @@ func (s *Store) GetTicketsByStatus(status kanban.Status) []kanban.Ticket {
 
 // UpdateTicket updates an existing ticket.
 func (s *Store) UpdateTicket(t *kanban.Ticket) error {
-	files, _ := json.Marshal(t.Files)
-	deps, _ := json.Marshal(t.Dependencies)
-	criteria, _ := json.Marshal(t.AcceptanceCriteria)
-	requirements, _ := json.Marshal(t.Requirements)
-	signoffs, _ := json.Marshal(t.Signoffs)
-	bugs, _ := json.Marshal(t.Bugs)
-	conversation, _ := json.Marshal(t.Conversation)
+	files := mustMarshal(t.Files)
+	deps := mustMarshal(t.Dependencies)
+	criteria := mustMarshal(t.AcceptanceCriteria)
+	requirements := mustMarshal(t.Requirements)
+	signoffs := mustMarshal(t.Signoffs)
+	bugs := mustMarshal(t.Bugs)
+	conversation := mustMarshal(t.Conversation)
 
 	_, err := s.db.Exec(`
 		UPDATE tickets SET
@@ -241,7 +252,7 @@ func (s *Store) UpdateTicketStatus(id string, status kanban.Status, by, note str
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.Exec(`
 		UPDATE tickets SET status = ?, updated_at = ? WHERE id = ?
@@ -289,7 +300,7 @@ func (s *Store) AddRun(run *kanban.AgentRun) error {
 
 // CompleteRun marks a run as complete.
 func (s *Store) CompleteRun(id, status, output string) {
-	s.db.Exec(`
+	_, _ = s.db.Exec(`
 		UPDATE agent_runs SET ended_at = ?, status = ?, output = ? WHERE id = ?
 	`, time.Now(), status, output, id)
 }
@@ -470,7 +481,7 @@ func (s *Store) getHistory(ticketID string) ([]kanban.HistoryEntry, error) {
 	return history, nil
 }
 
-// Scanner interface for both sql.Row and sql.Rows
+// Scanner interface for both sql.Row and sql.Rows.
 type scanner interface {
 	Scan(dest ...interface{}) error
 }
@@ -517,27 +528,27 @@ func scanTicketGeneric(s scanner) (*kanban.Ticket, error) {
 		t.Notes = notes.String
 	}
 
-	// Unmarshal JSON fields
+	// Unmarshal JSON fields (errors ignored - data is from trusted internal source)
 	if files.Valid {
-		json.Unmarshal([]byte(files.String), &t.Files)
+		_ = json.Unmarshal([]byte(files.String), &t.Files)
 	}
 	if deps.Valid {
-		json.Unmarshal([]byte(deps.String), &t.Dependencies)
+		_ = json.Unmarshal([]byte(deps.String), &t.Dependencies)
 	}
 	if criteria.Valid {
-		json.Unmarshal([]byte(criteria.String), &t.AcceptanceCriteria)
+		_ = json.Unmarshal([]byte(criteria.String), &t.AcceptanceCriteria)
 	}
 	if requirements.Valid {
-		json.Unmarshal([]byte(requirements.String), &t.Requirements)
+		_ = json.Unmarshal([]byte(requirements.String), &t.Requirements)
 	}
 	if signoffs.Valid {
-		json.Unmarshal([]byte(signoffs.String), &t.Signoffs)
+		_ = json.Unmarshal([]byte(signoffs.String), &t.Signoffs)
 	}
 	if bugs.Valid {
-		json.Unmarshal([]byte(bugs.String), &t.Bugs)
+		_ = json.Unmarshal([]byte(bugs.String), &t.Bugs)
 	}
 	if conversation.Valid {
-		json.Unmarshal([]byte(conversation.String), &t.Conversation)
+		_ = json.Unmarshal([]byte(conversation.String), &t.Conversation)
 	}
 
 	// Parent ID
@@ -612,13 +623,13 @@ func (s *Store) GetConfig() kanban.BoardConfig {
 
 func (s *Store) getBoardConfig() kanban.BoardConfig {
 	config := kanban.BoardConfig{
-		WorktreeDir:      ".worktrees",
-		MaxParallelAgents: 3,
+		WorktreeDir:        ".worktrees",
+		MaxParallelAgents:  3,
 		MaxTicketsPerAgent: 1,
-		MainBranch:       "main",
-		BranchPrefix:     "feat/",
-		SquashOnMerge:    true,
-		RebaseOnUpdate:   true,
+		MainBranch:         "main",
+		BranchPrefix:       "feat/",
+		SquashOnMerge:      true,
+		RebaseOnUpdate:     true,
 	}
 
 	if v, _ := s.GetConfigValue("worktree_dir"); v != "" {
@@ -812,7 +823,7 @@ func (s *Store) filesOverlap(a, b []string) bool {
 // GetInProgressCount returns the number of tickets currently being worked on.
 func (s *Store) GetInProgressCount() int {
 	var count int
-	s.db.QueryRow(`
+	_ = s.db.QueryRow(`
 		SELECT COUNT(*) FROM tickets
 		WHERE status IN ('IN_DEV', 'IN_QA', 'IN_UX', 'IN_SEC')
 	`).Scan(&count)
@@ -920,11 +931,11 @@ func (s *Store) ClearActivity(ticketID string) error {
 // SetIteration sets the current iteration.
 func (s *Store) SetIteration(iter *kanban.Iteration) {
 	if iter == nil {
-		s.SetConfig("iteration", "")
+		_ = s.SetConfig("iteration", "")
 		return
 	}
 	data, _ := json.Marshal(iter)
-	s.SetConfig("iteration", string(data))
+	_ = s.SetConfig("iteration", string(data))
 }
 
 // GetIteration returns the current iteration.
@@ -943,7 +954,7 @@ func (s *Store) GetIteration() *kanban.Iteration {
 // IsIterationComplete returns true if all tickets are done.
 func (s *Store) IsIterationComplete() bool {
 	var count int
-	s.db.QueryRow(`
+	_ = s.db.QueryRow(`
 		SELECT COUNT(*) FROM tickets
 		WHERE status NOT IN ('DONE', 'BACKLOG')
 	`).Scan(&count)
@@ -954,7 +965,7 @@ func (s *Store) IsIterationComplete() bool {
 
 // AddActiveRun records a new agent run.
 func (s *Store) AddActiveRun(run kanban.AgentRun) {
-	s.AddRun(&run)
+	_ = s.AddRun(&run)
 }
 
 // GetActiveDevRuns returns only dev agent runs.
@@ -992,7 +1003,7 @@ func (s *Store) GetActiveDevRuns() []kanban.AgentRun {
 // CleanupStaleRuns removes completed runs older than the given duration.
 func (s *Store) CleanupStaleRuns(maxAge time.Duration) {
 	cutoff := time.Now().Add(-maxAge)
-	s.db.Exec(`
+	_, _ = s.db.Exec(`
 		DELETE FROM agent_runs
 		WHERE ended_at IS NOT NULL AND ended_at < ?
 	`, cutoff)
@@ -1031,7 +1042,7 @@ func (s *Store) CleanupStaleRunningAgents(maxRunDuration time.Duration) int {
 
 	// Mark stale runs as failed
 	for _, id := range staleIDs {
-		s.db.Exec(`
+		_, _ = s.db.Exec(`
 			UPDATE agent_runs
 			SET status = 'failed', ended_at = ?, output = 'Marked as stale - exceeded max run duration'
 			WHERE id = ?
@@ -1063,7 +1074,7 @@ func (s *Store) CleanupOrphanedRunningAgents() int {
 // IsAgentRunning checks if an agent of the given type is already running for a ticket.
 func (s *Store) IsAgentRunning(ticketID, agentType string) bool {
 	var count int
-	s.db.QueryRow(`
+	_ = s.db.QueryRow(`
 		SELECT COUNT(*) FROM agent_runs
 		WHERE ticket_id = ? AND agent = ? AND status = 'running'
 	`, ticketID, agentType).Scan(&count)
@@ -1084,10 +1095,10 @@ func (s *Store) UpdateConversation(ticketID string, conv *kanban.PRDConversation
 // AreAllSubTicketsDone checks if all sub-tickets of a parent are complete.
 func (s *Store) AreAllSubTicketsDone(parentID string) bool {
 	var total, done int
-	s.db.QueryRow(`
+	_ = s.db.QueryRow(`
 		SELECT COUNT(*) FROM tickets WHERE parent_id = ?
 	`, parentID).Scan(&total)
-	s.db.QueryRow(`
+	_ = s.db.QueryRow(`
 		SELECT COUNT(*) FROM tickets WHERE parent_id = ? AND status = 'DONE'
 	`, parentID).Scan(&done)
 	return total > 0 && total == done
@@ -1219,7 +1230,7 @@ func (s *Store) GetRecentAuditEntries(limit int) ([]kanban.AuditEntry, error) {
 // GetAuditEntryCount returns the total number of audit entries.
 func (s *Store) GetAuditEntryCount() int {
 	var count int
-	s.db.QueryRow("SELECT COUNT(*) FROM agent_audit_log").Scan(&count)
+	_ = s.db.QueryRow("SELECT COUNT(*) FROM agent_audit_log").Scan(&count)
 	return count
 }
 
@@ -1292,7 +1303,7 @@ func (s *Store) GetConversation(id string) (*kanban.TicketConversation, error) {
 		&conv.CreatedAt, &resolvedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get conversation: %w", err)
@@ -1447,7 +1458,7 @@ func (s *Store) GetConversationMessages(conversationID string) ([]kanban.Convers
 		}
 
 		if metadata.Valid && metadata.String != "" {
-			json.Unmarshal([]byte(metadata.String), &msg.Metadata)
+			_ = json.Unmarshal([]byte(metadata.String), &msg.Metadata)
 		}
 
 		messages = append(messages, msg)
@@ -1547,7 +1558,7 @@ func (s *Store) GetLastPMCheckin(ticketID string) (*kanban.PMCheckin, error) {
 		checkin.ConversationID = convID.String
 	}
 	if findings.Valid && findings.String != "" {
-		json.Unmarshal([]byte(findings.String), &checkin.Findings)
+		_ = json.Unmarshal([]byte(findings.String), &checkin.Findings)
 	}
 	if actionRequired.Valid {
 		checkin.ActionRequired = actionRequired.String
@@ -1574,7 +1585,7 @@ func scanPMCheckins(rows *sql.Rows) ([]kanban.PMCheckin, error) {
 			checkin.ConversationID = convID.String
 		}
 		if findings.Valid && findings.String != "" {
-			json.Unmarshal([]byte(findings.String), &checkin.Findings)
+			_ = json.Unmarshal([]byte(findings.String), &checkin.Findings)
 		}
 		if actionRequired.Valid {
 			checkin.ActionRequired = actionRequired.String
@@ -1654,7 +1665,7 @@ func (s *Store) GetRun(id string) (*kanban.AgentRun, error) {
 // GetCompletedRunsCount returns the count of completed agent runs.
 func (s *Store) GetCompletedRunsCount() int {
 	var count int
-	s.db.QueryRow("SELECT COUNT(*) FROM agent_runs WHERE status != 'running'").Scan(&count)
+	_ = s.db.QueryRow("SELECT COUNT(*) FROM agent_runs WHERE status != 'running'").Scan(&count)
 	return count
 }
 
@@ -1747,15 +1758,15 @@ func (s *Store) GetWorktreePoolStats() (*kanban.WorktreePoolStats, error) {
 	stats := &kanban.WorktreePoolStats{}
 
 	// Get active count
-	s.db.QueryRow("SELECT COUNT(*) FROM worktree_pool WHERE status = 'active'").Scan(&stats.ActiveCount)
+	_ = s.db.QueryRow("SELECT COUNT(*) FROM worktree_pool WHERE status = 'active'").Scan(&stats.ActiveCount)
 
 	// Get merging count
-	s.db.QueryRow("SELECT COUNT(*) FROM worktree_pool WHERE status = 'merging'").Scan(&stats.MergingCount)
+	_ = s.db.QueryRow("SELECT COUNT(*) FROM worktree_pool WHERE status = 'merging'").Scan(&stats.MergingCount)
 
 	// Get limit from config
 	limitStr, _ := s.GetConfigValue("max_global_worktrees")
 	if limitStr != "" {
-		fmt.Sscanf(limitStr, "%d", &stats.Limit)
+		_, _ = fmt.Sscanf(limitStr, "%d", &stats.Limit)
 	} else {
 		stats.Limit = 3 // default
 	}
@@ -1767,7 +1778,7 @@ func (s *Store) GetWorktreePoolStats() (*kanban.WorktreePoolStats, error) {
 	}
 
 	// Count pending tickets (READY status waiting for worktree)
-	s.db.QueryRow(`
+	_ = s.db.QueryRow(`
 		SELECT COUNT(*) FROM tickets WHERE status = 'READY'
 	`).Scan(&stats.PendingCount)
 
@@ -2006,7 +2017,7 @@ func (s *Store) GetWorktreeConfig() (maxWorktrees int, mergeAfterDevSignoff bool
 	checkInterval = 30
 
 	if v, _ := s.GetConfigValue("max_global_worktrees"); v != "" {
-		fmt.Sscanf(v, "%d", &maxWorktrees)
+		_, _ = fmt.Sscanf(v, "%d", &maxWorktrees)
 	}
 	if v, _ := s.GetConfigValue("merge_after_dev_signoff"); v == "false" {
 		mergeAfterDevSignoff = false
@@ -2015,7 +2026,7 @@ func (s *Store) GetWorktreeConfig() (maxWorktrees int, mergeAfterDevSignoff bool
 		cleanupOnMerge = true
 	}
 	if v, _ := s.GetConfigValue("worktree_check_interval"); v != "" {
-		fmt.Sscanf(v, "%d", &checkInterval)
+		_, _ = fmt.Sscanf(v, "%d", &checkInterval)
 	}
 
 	return
@@ -2257,7 +2268,7 @@ func (s *Store) GetADR(id string) (*kanban.ADR, error) {
 
 	adr, err := scanADR(row)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get ADR: %w", err)
@@ -2405,7 +2416,7 @@ func (s *Store) GetNextADRNumber() (int, error) {
 		SELECT MAX(id) FROM adrs WHERE id LIKE 'ADR-%'
 	`).Scan(&maxID)
 	if err != nil {
-		return 1, nil
+		return 1, nil //nolint:nilerr // Fallback to 1 on query error is intentional.
 	}
 
 	if !maxID.Valid || maxID.String == "" {
@@ -2415,12 +2426,12 @@ func (s *Store) GetNextADRNumber() (int, error) {
 	var num int
 	_, err = fmt.Sscanf(maxID.String, "ADR-%d", &num)
 	if err != nil {
-		return 1, nil
+		return 1, nil //nolint:nilerr // Fallback to 1 on parse error is intentional.
 	}
 	return num + 1, nil
 }
 
-// ADR scan helpers
+// ADR scan helpers.
 func scanADR(row *sql.Row) (*kanban.ADR, error) {
 	var adr kanban.ADR
 	var context, decision, consequences, iterationID, supersededBy, createdBy sql.NullString

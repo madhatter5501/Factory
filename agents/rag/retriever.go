@@ -156,18 +156,14 @@ func (r *Retriever) buildQueryText(ticket TicketContext) string {
 	if ticket.Domain != "" {
 		parts = append(parts, ticket.Domain)
 	}
-	for _, s := range ticket.Stack {
-		parts = append(parts, s)
-	}
-	for _, k := range ticket.Keywords {
-		parts = append(parts, k)
-	}
+	parts = append(parts, ticket.Stack...)
+	parts = append(parts, ticket.Keywords...)
 
 	return strings.Join(parts, " ")
 }
 
 // keywordFallback uses keyword search when embeddings fail.
-func (r *Retriever) keywordFallback(ctx context.Context, query string, ticket TicketContext, opts RetrievalOptions) (*RetrievedContext, error) {
+func (r *Retriever) keywordFallback(ctx context.Context, query string, _ TicketContext, opts RetrievalOptions) (*RetrievedContext, error) {
 	result := &RetrievedContext{
 		Patterns:     make([]RetrievedItem, 0),
 		CodeExamples: make([]RetrievedItem, 0),

@@ -57,10 +57,10 @@ type Config struct {
 	CycleInterval     time.Duration `json:"cycleInterval"`
 
 	// Behavior
-	AutoMerge     bool `json:"autoMerge"`     // Auto-merge completed tickets
-	AutoCleanup   bool `json:"autoCleanup"`   // Auto-cleanup merged worktrees
-	Verbose       bool `json:"verbose"`       // Verbose logging
-	DryRun        bool `json:"dryRun"`        // Don't actually run agents
+	AutoMerge   bool `json:"autoMerge"`   // Auto-merge completed tickets
+	AutoCleanup bool `json:"autoCleanup"` // Auto-cleanup merged worktrees
+	Verbose     bool `json:"verbose"`     // Verbose logging
+	DryRun      bool `json:"dryRun"`      // Don't actually run agents
 
 	// API Mode Configuration (for token efficiency)
 	SpawnerMode    agents.SpawnerMode `json:"spawnerMode"`    // "cli", "api", or "auto"
@@ -92,12 +92,12 @@ func DefaultConfig() Config {
 
 // Metrics tracks orchestrator statistics.
 type Metrics struct {
-	CyclesRun         int           `json:"cyclesRun"`
-	AgentsSpawned     int           `json:"agentsSpawned"`
-	AgentsSucceeded   int           `json:"agentsSucceeded"`
-	AgentsFailed      int           `json:"agentsFailed"`
-	TicketsCompleted  int           `json:"ticketsCompleted"`
-	TotalRuntime      time.Duration `json:"totalRuntime"`
+	CyclesRun        int           `json:"cyclesRun"`
+	AgentsSpawned    int           `json:"agentsSpawned"`
+	AgentsSucceeded  int           `json:"agentsSucceeded"`
+	AgentsFailed     int           `json:"agentsFailed"`
+	TicketsCompleted int           `json:"ticketsCompleted"`
+	TotalRuntime     time.Duration `json:"totalRuntime"`
 }
 
 // NewOrchestrator creates a new orchestrator with the provided state store.
@@ -137,8 +137,8 @@ func NewOrchestrator(repoRoot string, config Config, state kanban.StateStore) (*
 		return nil, fmt.Errorf("failed to create spawner: %w", err)
 	}
 
-	// Wrap spawner with audit logging if the store supports it
-	var finalSpawner agents.AgentSpawner = spawner
+	// Wrap spawner with audit logging if the store supports it.
+	var finalSpawner agents.AgentSpawner = spawner //nolint:stylecheck // Explicit type for reassignment
 	if auditStore, ok := state.(agents.AuditStore); ok {
 		auditLogger := agents.NewStoreAuditLogger(auditStore)
 		finalSpawner = agents.NewAuditingSpawner(spawner, auditLogger)
@@ -327,6 +327,8 @@ func (o *Orchestrator) runCycle(ctx context.Context) error {
 }
 
 // processApprovedToRefining moves newly approved tickets into requirements refinement.
+//
+//nolint:unused // Reserved for future refining workflow implementation.
 func (o *Orchestrator) processApprovedToRefining(ctx context.Context) {
 	approvedTickets := o.state.GetTicketsByStatus(kanban.StatusApproved)
 	if len(approvedTickets) == 0 {
@@ -344,14 +346,16 @@ func (o *Orchestrator) processApprovedToRefining(ctx context.Context) {
 		}
 
 		// Move to REFINING status
-		o.state.UpdateTicketStatus(ticket.ID, kanban.StatusRefining, "PM", "Starting requirements analysis")
-		o.state.Save()
+		_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusRefining, "PM", "Starting requirements analysis")
+		_ = o.state.Save()
 
 		o.logger.Info("Ticket moved to requirements refinement", "ticket", ticket.ID)
 	}
 }
 
 // processRefiningStage runs PM requirements analysis on tickets being refined.
+//
+//nolint:unused // Reserved for future refining workflow implementation.
 func (o *Orchestrator) processRefiningStage(ctx context.Context) {
 	refiningTickets := o.state.GetTicketsByStatus(kanban.StatusRefining)
 	if len(refiningTickets) == 0 {
@@ -362,7 +366,7 @@ func (o *Orchestrator) processRefiningStage(ctx context.Context) {
 
 	for _, ticket := range refiningTickets {
 		// Update activity
-		o.state.UpdateActivity(ticket.ID, "PM analyzing requirements", "PM")
+		_ = o.state.UpdateActivity(ticket.ID, "PM analyzing requirements", "PM")
 
 		if o.config.DryRun {
 			o.logger.Info("[DRY RUN] Would run PM requirements analysis", "ticket", ticket.ID)
@@ -391,27 +395,29 @@ func (o *Orchestrator) processRefiningStage(ctx context.Context) {
 				ticket.Requirements = &kanban.Requirements{}
 			}
 			ticket.Requirements.Questions = append(ticket.Requirements.Questions, kanban.Question{Question: fmt.Sprintf("Needs %s expert consultation", expertDomain)})
-			o.state.UpdateTicketStatus(ticket.ID, kanban.StatusNeedsExpert, "PM", fmt.Sprintf("Needs %s expert input", expertDomain))
+			_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusNeedsExpert, "PM", fmt.Sprintf("Needs %s expert input", expertDomain))
 
 		case kanban.StatusAwaitingUser:
 			// Requirements compiled, waiting for user review
-			o.state.UpdateTicketStatus(ticket.ID, kanban.StatusAwaitingUser, "PM", "Requirements ready for user review")
+			_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusAwaitingUser, "PM", "Requirements ready for user review")
 
 		case kanban.StatusReady:
 			// Requirements are clear enough to proceed directly
-			o.state.UpdateTicketStatus(ticket.ID, kanban.StatusReady, "PM", "Requirements clear, ready for development")
+			_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusReady, "PM", "Requirements clear, ready for development")
 
 		default:
 			// Stay in REFINING if analysis is incomplete
 			o.logger.Debug("Ticket staying in refinement", "ticket", ticket.ID)
 		}
 
-		o.state.ClearActivity(ticket.ID)
-		o.state.Save()
+		_ = o.state.ClearActivity(ticket.ID)
+		_ = o.state.Save()
 	}
 }
 
 // processExpertConsultationStage handles tickets waiting for domain expert input.
+//
+//nolint:unused // Reserved for future expert consultation workflow.
 func (o *Orchestrator) processExpertConsultationStage(ctx context.Context) {
 	expertTickets := o.state.GetTicketsByStatus(kanban.StatusNeedsExpert)
 	if len(expertTickets) == 0 {
@@ -427,7 +433,7 @@ func (o *Orchestrator) processExpertConsultationStage(ctx context.Context) {
 			expertDomain = "backend"
 		}
 
-		o.state.UpdateActivity(ticket.ID, fmt.Sprintf("Consulting %s expert", expertDomain), "Expert")
+		_ = o.state.UpdateActivity(ticket.ID, fmt.Sprintf("Consulting %s expert", expertDomain), "Expert")
 
 		if o.config.DryRun {
 			o.logger.Info("[DRY RUN] Would run expert consultation", "ticket", ticket.ID, "domain", expertDomain)
@@ -470,15 +476,17 @@ func (o *Orchestrator) processExpertConsultationStage(ctx context.Context) {
 		ticket.Requirements.TechnicalNotes = result.Output
 
 		// Move back to REFINING for PM to compile final requirements
-		o.state.UpdateTicketStatus(ticket.ID, kanban.StatusRefining, "Expert", "Expert consultation complete, resuming analysis")
-		o.state.ClearActivity(ticket.ID)
-		o.state.Save()
+		_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusRefining, "Expert", "Expert consultation complete, resuming analysis")
+		_ = o.state.ClearActivity(ticket.ID)
+		_ = o.state.Save()
 
 		o.logger.Info("Expert consultation complete", "ticket", ticket.ID, "domain", expertDomain)
 	}
 }
 
 // parseRequirementsResult analyzes PM requirements agent output to determine next status.
+//
+//nolint:unused // Reserved for future requirements parsing.
 func (o *Orchestrator) parseRequirementsResult(result *agents.AgentResult) (kanban.Status, string) {
 	output := result.Output
 
@@ -507,6 +515,8 @@ func (o *Orchestrator) parseRequirementsResult(result *agents.AgentResult) (kanb
 }
 
 // containsAny checks if the text contains any of the substrings (case-insensitive).
+//
+//nolint:unused // Used by parseRequirementsResult which is reserved for future use.
 func containsAny(text string, substrings ...string) bool {
 	lowerText := strings.ToLower(text)
 	for _, s := range substrings {
@@ -680,15 +690,15 @@ func (o *Orchestrator) runDevAgent(ctx context.Context, ticket *kanban.Ticket, d
 
 	// Update ticket state and activity
 	activityDescription := getActivityDescription(agentType)
-	o.state.UpdateTicketStatus(ticket.ID, kanban.StatusInDev, string(agentType), "Starting development")
-	o.state.AssignAgent(ticket.ID, string(agentType))
-	o.state.UpdateActivity(ticket.ID, activityDescription, string(agentType))
-	o.state.SetWorktree(ticket.ID, &kanban.Worktree{
+	_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusInDev, string(agentType), "Starting development")
+	_ = o.state.AssignAgent(ticket.ID, string(agentType))
+	_ = o.state.UpdateActivity(ticket.ID, activityDescription, string(agentType))
+	_ = o.state.SetWorktree(ticket.ID, &kanban.Worktree{
 		Path:   worktreePath,
 		Branch: branchName,
 		Active: true,
 	})
-	o.state.Save()
+	_ = o.state.Save()
 
 	// Record run
 	runID := fmt.Sprintf("%s-%s-%d", ticket.ID, agentType, time.Now().Unix())
@@ -731,14 +741,14 @@ func (o *Orchestrator) runDevAgent(ctx context.Context, ticket *kanban.Ticket, d
 	}
 
 	// Clear activity and transition to QA
-	o.state.ClearActivity(ticket.ID)
-	o.state.AddSignoff(ticket.ID, "dev", string(agentType))
+	_ = o.state.ClearActivity(ticket.ID)
+	_ = o.state.AddSignoff(ticket.ID, "dev", string(agentType))
 
 	// Create sign-off report with dev findings
 	o.createSignoffReport(ticket.ID, agentType, agentOutput)
 
-	o.state.UpdateTicketStatus(ticket.ID, kanban.StatusInQA, string(agentType), "Development complete, ready for QA")
-	o.state.Save()
+	_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusInQA, string(agentType), "Development complete, ready for QA")
+	_ = o.state.Save()
 
 	o.logger.Info("Dev agent completed", "ticket", ticket.ID)
 }
@@ -823,7 +833,7 @@ func (o *Orchestrator) runReviewAgent(ctx context.Context, ticket *kanban.Ticket
 
 	// Update activity to show what agent is doing
 	activityDescription := getActivityDescription(agentType)
-	o.state.UpdateActivity(ticket.ID, activityDescription, string(agentType))
+	_ = o.state.UpdateActivity(ticket.ID, activityDescription, string(agentType))
 
 	worktreePath := ""
 	if ticket.Worktree != nil {
@@ -836,10 +846,10 @@ func (o *Orchestrator) runReviewAgent(ctx context.Context, ticket *kanban.Ticket
 			o.logger.Warn("Worktree missing for ticket, moving to blocked",
 				"ticket", ticket.ID,
 				"worktree", worktreePath)
-			o.state.ClearActivity(ticket.ID)
-			o.state.UpdateTicketStatus(ticket.ID, kanban.StatusBlocked, "system",
+			_ = o.state.ClearActivity(ticket.ID)
+			_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusBlocked, "system",
 				fmt.Sprintf("Worktree directory missing: %s", worktreePath))
-			o.state.Save()
+			_ = o.state.Save()
 			return
 		}
 	}
@@ -854,7 +864,7 @@ func (o *Orchestrator) runReviewAgent(ctx context.Context, ticket *kanban.Ticket
 		StartedAt: time.Now(),
 		Status:    "running",
 	})
-	o.state.Save()
+	_ = o.state.Save()
 
 	var agentOutput string
 	if !o.config.DryRun {
@@ -877,7 +887,7 @@ func (o *Orchestrator) runReviewAgent(ctx context.Context, ticket *kanban.Ticket
 
 			// Check if bugs were found
 			if len(ticket.Bugs) > 0 {
-				o.state.UpdateTicketStatus(ticket.ID, kanban.StatusBlocked, string(agentType), "Bugs found during review")
+				_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusBlocked, string(agentType), "Bugs found during review")
 			}
 			return
 		}
@@ -890,16 +900,16 @@ func (o *Orchestrator) runReviewAgent(ctx context.Context, ticket *kanban.Ticket
 	}
 
 	// Clear activity, sign off and transition
-	o.state.ClearActivity(ticket.ID)
-	o.state.AddSignoff(ticket.ID, signoffStage, string(agentType))
+	_ = o.state.ClearActivity(ticket.ID)
+	_ = o.state.AddSignoff(ticket.ID, signoffStage, string(agentType))
 
 	// Create sign-off report with review findings
 	if agentOutput != "" {
 		o.createSignoffReport(ticket.ID, agentType, agentOutput)
 	}
 
-	o.state.UpdateTicketStatus(ticket.ID, nextStatus, string(agentType), fmt.Sprintf("%s review complete", agentType))
-	o.state.Save()
+	_ = o.state.UpdateTicketStatus(ticket.ID, nextStatus, string(agentType), fmt.Sprintf("%s review complete", agentType))
+	_ = o.state.Save()
 
 	if nextStatus == kanban.StatusDone {
 		o.metrics.TicketsCompleted++
@@ -925,6 +935,8 @@ func getReviewTypeName(agentType agents.AgentType) string {
 }
 
 // getReviewPassedReason returns a reason for passing a review stage.
+//
+//nolint:unused // Reserved for enhanced review workflow.
 func getReviewPassedReason(agentType agents.AgentType) string {
 	switch agentType {
 	case agents.AgentTypeQA:
@@ -941,6 +953,8 @@ func getReviewPassedReason(agentType agents.AgentType) string {
 }
 
 // getStatusName returns a human-readable name for a status.
+//
+//nolint:unused // Reserved for status display helpers.
 func getStatusName(status kanban.Status) string {
 	switch status {
 	case kanban.StatusBacklog:
@@ -1024,7 +1038,7 @@ func (o *Orchestrator) processCompletedTickets(ctx context.Context) {
 		}
 
 		// Update ticket
-		o.state.SetWorktree(ticket.ID, &kanban.Worktree{
+		_ = o.state.SetWorktree(ticket.ID, &kanban.Worktree{
 			Path:   ticket.Worktree.Path,
 			Branch: ticket.Worktree.Branch,
 			Active: false,
@@ -1169,9 +1183,8 @@ func getSignoffTitle(agentType agents.AgentType, status string) string {
 
 	if status == "passed" {
 		return fmt.Sprintf("%s Review - Approved", agentName)
-	} else if status == "failed" {
+	} else if status == kanban.AgentRunStatusFailed {
 		return fmt.Sprintf("%s Review - Issues Found", agentName)
 	}
 	return fmt.Sprintf("%s Review Complete", agentName)
 }
-
