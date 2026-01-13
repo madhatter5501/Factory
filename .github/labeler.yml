@@ -1,0 +1,74 @@
+# PR Labeler Configuration
+# Labels are applied based on which files are changed
+
+# Area labels
+area/agents:
+  - changed-files:
+      - any-glob-to-any-file: 'agents/**/*'
+
+area/web:
+  - changed-files:
+      - any-glob-to-any-file: 'internal/web/**/*'
+
+area/database:
+  - changed-files:
+      - any-glob-to-any-file: 'internal/db/**/*'
+
+area/kanban:
+  - changed-files:
+      - any-glob-to-any-file: 'kanban/**/*'
+
+area/git:
+  - changed-files:
+      - any-glob-to-any-file: 'git/**/*'
+
+area/rag:
+  - changed-files:
+      - any-glob-to-any-file: 'agents/rag/**/*'
+
+# Type labels
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**/*'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*_test.go'
+          - 'testdata/**/*'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**/*'
+          - 'Makefile'
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'go.mod'
+          - 'go.sum'
+          - '.golangci.yml'
+          - '.gitignore'
+
+api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'internal/web/api.go'
+          - 'agents/provider/**/*'
+
+prompts:
+  - changed-files:
+      - any-glob-to-any-file: 'prompts/**/*'
+
+templates:
+  - changed-files:
+      - any-glob-to-any-file: 'templates/**/*'
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'SECURITY.md'
+          - '.github/workflows/security*.yml'

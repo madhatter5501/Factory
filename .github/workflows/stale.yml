@@ -1,0 +1,52 @@
+name: Stale Issue & PR Management
+
+on:
+  schedule:
+    # Run daily at midnight UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: Mark Stale Issues and PRs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stale Action
+        uses: actions/stale@v9
+        with:
+          # Issue configuration
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had recent activity.
+            It will be closed in 14 days if no further activity occurs.
+            If this issue is still relevant, please comment or remove the stale label.
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          exempt-issue-labels: 'pinned,security,bug,help wanted,good first issue'
+
+          # PR configuration
+          stale-pr-message: |
+            This PR has been automatically marked as stale because it has not had recent activity.
+            It will be closed in 7 days if no further activity occurs.
+            Please update your branch and address any review comments, or close the PR if it's no longer needed.
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          exempt-pr-labels: 'pinned,security,work-in-progress'
+
+          # Close messages
+          close-issue-message: 'This issue was closed due to inactivity. Feel free to reopen if still relevant.'
+          close-pr-message: 'This PR was closed due to inactivity. Feel free to reopen with updated changes.'
+
+          # Operations per run (to avoid rate limiting)
+          operations-per-run: 100
+
+          # Don't remove stale label on update (let humans manage this)
+          remove-stale-when-updated: true
+
+          # Ascending order processes oldest first
+          ascending: true

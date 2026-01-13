@@ -1,0 +1,41 @@
+# CODEOWNERS - Defines who is responsible for code review
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @madhatter5501
+
+# Core orchestration
+/orchestrator*.go @madhatter5501
+/background.go @madhatter5501
+
+# Agent system
+/agents/ @madhatter5501
+
+# Web interface
+/internal/web/ @madhatter5501
+
+# Database layer
+/internal/db/ @madhatter5501
+
+# Kanban state management
+/kanban/ @madhatter5501
+
+# Git operations
+/git/ @madhatter5501
+
+# CI/CD and GitHub configuration
+/.github/ @madhatter5501
+
+# Security-sensitive files require explicit review
+/SECURITY.md @madhatter5501
+/.github/workflows/security*.yml @madhatter5501
+/agents/spawner.go @madhatter5501
+
+# Documentation
+/*.md @madhatter5501
+/docs/ @madhatter5501
+
+# Build and dependencies
+/go.mod @madhatter5501
+/go.sum @madhatter5501
+/Makefile @madhatter5501

@@ -1,0 +1,162 @@
+# Release Drafter Configuration
+# https://github.com/release-drafter/release-drafter
+
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+# Version resolver based on labels
+version-resolver:
+  major:
+    labels:
+      - 'breaking'
+      - 'major'
+  minor:
+    labels:
+      - 'feature'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'bug'
+      - 'bugfix'
+      - 'fix'
+      - 'patch'
+      - 'dependencies'
+      - 'documentation'
+  default: patch
+
+# Categories for organizing release notes
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+      - 'bugfix'
+      - 'fix'
+  - title: '🔒 Security'
+    labels:
+      - 'security'
+  - title: '📈 Performance'
+    labels:
+      - 'performance'
+  - title: '📚 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+  - title: '🧪 Testing'
+    labels:
+      - 'tests'
+      - 'testing'
+  - title: '🏗️ Build & CI'
+    labels:
+      - 'ci'
+      - 'build'
+  - title: '🔄 Refactoring'
+    labels:
+      - 'refactor'
+  - title: '📦 Dependencies'
+    labels:
+      - 'dependencies'
+  - title: '🧹 Maintenance'
+    labels:
+      - 'chore'
+      - 'maintenance'
+  - title: '💥 Breaking Changes'
+    labels:
+      - 'breaking'
+  - title: '🔧 Other Changes'
+    labels:
+      - '*'
+
+# Auto-labeling based on branch names and file paths
+autolabeler:
+  - label: 'feature'
+    branch:
+      - '/^feat(ure)?[/-].+/'
+    title:
+      - '/^feat(\(.+\))?:/'
+  - label: 'bug'
+    branch:
+      - '/^fix[/-].+/'
+      - '/^bug[/-].+/'
+    title:
+      - '/^fix(\(.+\))?:/'
+  - label: 'documentation'
+    branch:
+      - '/^docs?[/-].+/'
+    title:
+      - '/^docs?(\(.+\))?:/'
+    files:
+      - '*.md'
+      - 'docs/**/*'
+  - label: 'ci'
+    branch:
+      - '/^ci[/-].+/'
+    title:
+      - '/^ci(\(.+\))?:/'
+    files:
+      - '.github/**/*'
+  - label: 'dependencies'
+    branch:
+      - '/^deps?[/-].+/'
+      - '/^dependabot/.+/'
+    title:
+      - '/^deps?(\(.+\))?:/'
+      - '/^build\(deps\):/'
+    files:
+      - 'go.mod'
+      - 'go.sum'
+  - label: 'refactor'
+    branch:
+      - '/^refactor[/-].+/'
+    title:
+      - '/^refactor(\(.+\))?:/'
+  - label: 'tests'
+    branch:
+      - '/^test[/-].+/'
+    title:
+      - '/^test(\(.+\))?:/'
+    files:
+      - '**/*_test.go'
+  - label: 'security'
+    branch:
+      - '/^security[/-].+/'
+    title:
+      - '/^security(\(.+\))?:/'
+    files:
+      - 'SECURITY.md'
+  - label: 'performance'
+    branch:
+      - '/^perf[/-].+/'
+    title:
+      - '/^perf(\(.+\))?:/'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.+\))?:/'
+
+# Exclude certain PRs from release notes
+exclude-labels:
+  - 'skip-changelog'
+  - 'duplicate'
+  - 'wontfix'
+  - 'invalid'
+
+# Release notes template
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  $CONTRIBUTORS
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+# PR body replacers (clean up PR bodies in release notes)
+replacers:
+  # Remove conventional commit prefixes from PR titles
+  - search: '/^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|deps|security)(\(.+\))?: /g'
+    replace: ''
