@@ -1,0 +1,145 @@
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - errorlint
+    - exhaustive
+    - copyloopvar
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - gofmt
+    - goimports
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nilerr
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - stylecheck
+    - thelper
+    - tparallel
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+
+linters-settings:
+  dupl:
+    threshold: 150
+
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  errorlint:
+    errorf: true
+
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  gocyclo:
+    min-complexity: 15
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: factory
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+
+  misspell:
+    locale: US
+
+  nakedret:
+    max-func-lines: 30
+
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+  staticcheck:
+    checks: ["all"]
+
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1003"]
+
+issues:
+  exclude-rules:
+    # Exclude test files from some checks
+    - path: _test\.go
+      linters:
+        - dupl
+        - errcheck
+        - goconst
+        - gosec
+
+    # Exclude main packages from package comment check
+    - path: cmd/
+      linters:
+        - revive
+      text: "package-comments"
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
