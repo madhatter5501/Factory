@@ -1,7 +1,7 @@
 # Build output
 bin/
-factory
-factory-server
+/factory
+/factory-server
 *.exe
 
 # Runtime data (created by factory)
