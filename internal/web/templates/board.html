@@ -1,0 +1,267 @@
+{{define "board.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factory Dashboard | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <!-- Global Status Bar -->
+    {{template "global_status" .}}
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo">
+            <span class="logo-icon">{{icon "activity"}}</span>
+            <span class="logo-text">Factory</span>
+        </div>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">{{icon "layers"}}</button>
+    </header>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">{{icon "activity"}}</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/" class="active">
+                    <span class="nav-icon">{{icon "layout"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Execution</span>
+                        <span class="nav-contract">Work items & flow</span>
+                    </span>
+                </a></li>
+                <li><a href="/agents">
+                    <span class="nav-icon">{{icon "bot"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Agents</span>
+                        <span class="nav-contract">Actors & capabilities</span>
+                    </span>
+                </a></li>
+                <li><a href="/settings">
+                    <span class="nav-icon">{{icon "settings"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Policies</span>
+                        <span class="nav-contract">Thresholds & rules</span>
+                    </span>
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/new" class="btn btn-primary">{{icon "plus"}} New Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            <!-- Facet Rail -->
+            <div class="facet-rail" id="facet-rail">
+                <div class="facet-filters">
+                    <button class="facet-btn facet-btn-active" data-facet="all" onclick="setFacet('all')">
+                        All
+                    </button>
+                    {{range .Domains}}
+                    <button class="facet-btn" data-facet="domain:{{.}}" onclick="setFacet('domain:{{.}}')">
+                        {{.}}
+                    </button>
+                    {{end}}
+                    {{range .Agents}}
+                    <button class="facet-btn" data-facet="agent:{{.}}" onclick="setFacet('agent:{{.}}')">
+                        {{icon "bot"}} {{.}}
+                    </button>
+                    {{end}}
+                </div>
+                <div class="active-filters" id="active-filters"></div>
+            </div>
+
+            <div class="board" id="board" hx-get="/partials/board" hx-trigger="sse:board-update" hx-swap="innerHTML">
+                <div class="columns">
+                    {{range .Columns}}
+                    {{if .Tickets}}
+                    <div class="column column-{{.Status | statusColor}}{{if eq .Status "DONE"}} column-done{{end}}">
+                        <div class="column-header">
+                            <h2>{{.Status | statusDisplayName}}</h2>
+                            <span class="ticket-count">{{len .Tickets}}</span>
+                        </div>
+                        <div class="ticket-list">
+                            {{range .Tickets}}
+                            <div class="ticket-card{{if .BlockedReason}} ticket-blocked{{end}}" onclick="window.location='/tickets/{{.ID}}'">
+                                <div class="ticket-header">
+                                    <span class="domain-badge domain-{{.Domain}} badge-clickable"
+                                          data-facet="domain:{{.Domain}}"
+                                          onclick="event.stopPropagation(); setFacet('domain:{{.Domain}}')">{{.Domain}}</span>
+                                    {{if .Priority}}
+                                    <span class="priority priority-{{.Priority}}">P{{.Priority}}</span>
+                                    {{end}}
+                                </div>
+                                <h3 class="ticket-title">{{.Title}}</h3>
+                                {{if .Description}}
+                                <p class="ticket-desc">{{.Description | truncate 100}}</p>
+                                {{end}}
+                                {{/* Blocked reason - explain why this is blocked */}}
+                                {{if .BlockedReason}}
+                                <div class="blocked-reason {{if .BlockedReason.IsManaged}}managed{{else}}needs-attention{{end}}">
+                                    {{icon (.BlockedReason.Category | blockedIcon)}}
+                                    <span class="blocked-summary">{{.BlockedReason.Summary}}</span>
+                                    {{if .BlockedReason.IsManaged}}
+                                    <span class="blocked-status" title="System is addressing this">{{icon "bot"}}</span>
+                                    {{else}}
+                                    <span class="blocked-status needs-human" title="May need human input">{{icon "user"}}</span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                {{/* Creation context - why this exists */}}
+                                {{if and .CreationContext (ne .CreationContext.Reason "user_request")}}
+                                <div class="creation-context">
+                                    {{if eq .CreationContext.Reason "prd_breakdown"}}
+                                    {{icon "git-branch"}} From: {{.CreationContext.ParentTitle | truncate 40}}
+                                    {{else if eq .CreationContext.Reason "detected_issue"}}
+                                    {{icon "search"}} {{.CreationContext.Details}}
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                {{if .Tags}}
+                                <div class="ticket-tags">
+                                    {{range .Tags}}
+                                    <span class="tag tag-{{.Type}} tag-clickable"
+                                          style="--tag-color: {{.Color}}"
+                                          data-facet="tag:{{.Name}}"
+                                          onclick="event.stopPropagation(); setFacet('tag:{{.Name}}')">
+                                        {{if eq .Type "epic"}}{{icon "layers"}}{{end}}{{.Name}}
+                                    </span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                                <div class="ticket-footer">
+                                    {{if .AssignedAgent}}
+                                    <span class="agent-badge badge-clickable"
+                                          data-facet="agent:{{.AssignedAgent}}"
+                                          onclick="event.stopPropagation(); setFacet('agent:{{.AssignedAgent}}')">{{icon "bot"}} {{.AssignedAgent}}</span>
+                                    {{end}}
+                                    <span class="time-ago">{{.UpdatedAt | timeAgo}}</span>
+                                </div>
+                                {{if eq .Status "AWAITING_USER"}}
+                                <div class="ticket-actions">
+                                    <button class="btn btn-success btn-sm"
+                                            hx-post="/api/tickets/{{.ID}}/ready"
+                                            hx-swap="none"
+                                            hx-on::after-request="location.reload()"
+                                            onclick="event.stopPropagation()">
+                                        {{icon "check"}} Confirm Intent
+                                    </button>
+                                </div>
+                                {{end}}
+                                {{if eq .Status "PM_REVIEW"}}
+                                <div class="ticket-actions">
+                                    <span class="decision-hint">{{icon "info"}} Governance checkpoint</span>
+                                </div>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                    {{end}}
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+
+    // Facet filtering system
+    let activeFacets = new Set();
+
+    function setFacet(facet) {
+        if (facet === 'all') {
+            activeFacets.clear();
+        } else if (activeFacets.has(facet)) {
+            activeFacets.delete(facet);
+        } else {
+            activeFacets.add(facet);
+        }
+        applyFacets();
+        updateFacetUI();
+    }
+
+    function clearFacet(facet) {
+        activeFacets.delete(facet);
+        applyFacets();
+        updateFacetUI();
+    }
+
+    function applyFacets() {
+        const cards = document.querySelectorAll('.ticket-card');
+
+        cards.forEach(card => {
+            if (activeFacets.size === 0) {
+                card.classList.remove('facet-hidden', 'facet-highlight');
+                return;
+            }
+
+            let matches = true;
+            activeFacets.forEach(facet => {
+                const [type, value] = facet.split(':');
+                let cardHasFacet = false;
+
+                if (type === 'domain') {
+                    const domain = card.querySelector('.domain-badge');
+                    cardHasFacet = domain && domain.textContent.trim() === value;
+                } else if (type === 'agent') {
+                    const agent = card.querySelector('.agent-badge');
+                    cardHasFacet = agent && agent.textContent.trim().includes(value);
+                } else if (type === 'tag') {
+                    const tags = card.querySelectorAll('.tag');
+                    tags.forEach(tag => {
+                        if (tag.textContent.trim().includes(value)) cardHasFacet = true;
+                    });
+                }
+
+                if (!cardHasFacet) matches = false;
+            });
+
+            if (matches) {
+                card.classList.remove('facet-hidden');
+                card.classList.add('facet-highlight');
+            } else {
+                card.classList.add('facet-hidden');
+                card.classList.remove('facet-highlight');
+            }
+        });
+    }
+
+    function updateFacetUI() {
+        // Update rail buttons
+        document.querySelectorAll('.facet-btn').forEach(btn => {
+            const facet = btn.dataset.facet;
+            if (facet === 'all') {
+                btn.classList.toggle('facet-btn-active', activeFacets.size === 0);
+            } else {
+                btn.classList.toggle('facet-btn-active', activeFacets.has(facet));
+            }
+        });
+
+        // Update active filters display
+        const container = document.getElementById('active-filters');
+        container.innerHTML = '';
+        activeFacets.forEach(facet => {
+            const chip = document.createElement('span');
+            chip.className = 'filter-chip';
+            chip.innerHTML = `${facet} <button onclick="clearFacet('${facet}')">&times;</button>`;
+            container.appendChild(chip);
+        });
+
+        // Highlight matching elements on cards
+        document.querySelectorAll('[data-facet]').forEach(el => {
+            el.classList.toggle('facet-active', activeFacets.has(el.dataset.facet));
+        });
+    }
+    </script>
+</body>
+</html>
+{{end}}

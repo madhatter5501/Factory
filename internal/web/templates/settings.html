@@ -1,0 +1,488 @@
+{{define "settings.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <!-- Global Status Bar -->
+    {{template "global_status" .}}
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo">
+            <span class="logo-icon">{{icon "activity"}}</span>
+            <span class="logo-text">Factory</span>
+        </div>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">{{icon "layers"}}</button>
+    </header>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">{{icon "activity"}}</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">
+                    <span class="nav-icon">{{icon "layout"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Execution</span>
+                        <span class="nav-contract">Work items & flow</span>
+                    </span>
+                </a></li>
+                <li><a href="/agents">
+                    <span class="nav-icon">{{icon "bot"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Agents</span>
+                        <span class="nav-contract">Actors & capabilities</span>
+                    </span>
+                </a></li>
+                <li><a href="/settings" class="active">
+                    <span class="nav-icon">{{icon "settings"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Policies</span>
+                        <span class="nav-contract">Thresholds & rules</span>
+                    </span>
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/new" class="btn btn-primary">{{icon "plus"}} New Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            <div class="settings-page">
+                <h1>Settings</h1>
+
+                <!-- Orchestrator Control Section -->
+                <div class="settings-section orchestrator-control">
+                    <h2>Orchestrator Control</h2>
+                    <p class="help-text section-intro">Control the factory orchestrator that processes tickets and spawns AI agents.</p>
+
+                    <div class="orchestrator-status" id="orchestrator-status">
+                        <div class="status-indicator-large" id="orch-status-indicator">
+                            <span class="status-dot stopped"></span>
+                            <span class="status-text">Checking status...</span>
+                        </div>
+                        <div class="orchestrator-metrics" id="orch-metrics" style="display: none;">
+                            <div class="metric"><span class="label">Uptime:</span> <span id="orch-uptime">-</span></div>
+                            <div class="metric"><span class="label">Cycles:</span> <span id="orch-cycles">0</span></div>
+                            <div class="metric"><span class="label">Agents Spawned:</span> <span id="orch-spawned">0</span></div>
+                        </div>
+                    </div>
+
+                    <div class="orchestrator-actions">
+                        <button type="button" class="btn btn-success" id="btn-start-orch" onclick="startOrchestrator()">
+                            Start Orchestrator
+                        </button>
+                        <button type="button" class="btn btn-danger" id="btn-stop-orch" onclick="stopOrchestrator()" style="display: none;">
+                            Stop Orchestrator
+                        </button>
+                    </div>
+                </div>
+
+                <form class="settings-form" hx-patch="/api/settings" hx-swap="none"
+                      hx-on::after-request="if(event.detail.successful) { document.getElementById('save-status').textContent = 'Saved!'; setTimeout(() => document.getElementById('save-status').textContent = '', 2000); }">
+                    <div class="settings-section">
+                        <h2>Git Configuration</h2>
+
+                        <div class="form-group">
+                            <label for="worktree_dir">Worktree Directory</label>
+                            <input type="text" id="worktree_dir" name="worktree_dir"
+                                   value="{{index .Config "worktree_dir"}}">
+                            <p class="help-text">Directory where git worktrees are created</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="main_branch">Main Branch</label>
+                            <input type="text" id="main_branch" name="main_branch"
+                                   value="{{index .Config "main_branch"}}">
+                            <p class="help-text">The main branch to merge into</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="branch_prefix">Branch Prefix</label>
+                            <input type="text" id="branch_prefix" name="branch_prefix"
+                                   value="{{index .Config "branch_prefix"}}">
+                            <p class="help-text">Prefix for feature branches (e.g., feat/, feature/)</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="git_provider">Git Provider</label>
+                            <select id="git_provider" name="git_provider">
+                                <option value="github" {{if eq (index .Config "git_provider") "github"}}selected{{end}}>GitHub</option>
+                                <option value="gitlab" {{if eq (index .Config "git_provider") "gitlab"}}selected{{end}}>GitLab</option>
+                                <option value="bitbucket" {{if eq (index .Config "git_provider") "bitbucket"}}selected{{end}}>Bitbucket</option>
+                            </select>
+                            <p class="help-text">Git hosting provider for branch URLs and clone commands</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="git_repo_url">Repository URL</label>
+                            <input type="text" id="git_repo_url" name="git_repo_url"
+                                   value="{{index .Config "git_repo_url"}}"
+                                   placeholder="https://github.com/org/repo">
+                            <p class="help-text">Base URL for the repository (e.g., https://github.com/org/repo)</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="squash_on_merge"
+                                       {{if eq (index .Config "squash_on_merge") "true"}}checked{{end}}>
+                                Squash commits on merge
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h2>Agent Configuration</h2>
+
+                        <div class="form-group">
+                            <label for="max_parallel_agents">Max Parallel Agents</label>
+                            <input type="number" id="max_parallel_agents" name="max_parallel_agents"
+                                   value="{{index .Config "max_parallel_agents"}}" min="1" max="10">
+                            <p class="help-text">Maximum number of agents running simultaneously</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="pm_checkin_interval">PM Check-in Interval (minutes)</label>
+                            <input type="number" id="pm_checkin_interval" name="pm_checkin_interval"
+                                   value="{{index .Config "pm_checkin_interval"}}" min="5" max="60">
+                            <p class="help-text">How often the PM agent checks in on active development (default: 15)</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="require_all_signoffs"
+                                       {{if eq (index .Config "require_all_signoffs") "true"}}checked{{end}}>
+                                Require all sign-offs before completion
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" name="enable_audit_logging"
+                                       {{if eq (index .Config "enable_audit_logging") "true"}}checked{{end}}>
+                                Enable detailed audit logging (prompts/responses)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                        <span id="save-status" class="save-status"></span>
+                    </div>
+                </form>
+
+                <!-- AI Provider Configuration Section -->
+                <div class="settings-section" id="provider-section">
+                    <h2>AI Provider Configuration</h2>
+                    <p class="help-text section-intro">Configure which AI provider and model each agent type uses. Set API keys in environment variables.</p>
+
+                    <!-- API Key Status -->
+                    <div class="api-key-status">
+                        <h3>API Key Status</h3>
+                        <div class="key-status-grid">
+                            {{range .Providers}}
+                            <div class="key-status-item {{if index $.APIKeyStatus .Name}}configured{{else}}missing{{end}}">
+                                <span class="status-indicator"></span>
+                                <span class="provider-name">{{.DisplayName}}</span>
+                                <span class="env-var">{{.EnvVar}}</span>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+
+                    <!-- Agent Provider Configuration Table -->
+                    <div class="provider-config-table">
+                        <h3>Agent Model Configuration</h3>
+                        <table class="config-table">
+                            <thead>
+                                <tr>
+                                    <th>Agent Type</th>
+                                    <th>Provider</th>
+                                    <th>Model</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agent-config-body">
+                                {{$configs := .ProviderConfigs}}
+                                {{$providers := .Providers}}
+                                {{$apiStatus := .APIKeyStatus}}
+                                {{range $agent := .AgentTypes}}
+                                {{$cfg := index $configs $agent}}
+                                <tr data-agent="{{$agent}}">
+                                    <td class="agent-name">
+                                        <span class="agent-avatar {{$agent}}"></span>
+                                        {{$agent}}
+                                    </td>
+                                    <td>
+                                        <select class="provider-select" data-agent="{{$agent}}" onchange="updateModelOptions(this)">
+                                            {{range $providers}}
+                                            <option value="{{.Name}}" {{if eq $cfg.Provider .Name}}selected{{end}}>{{.DisplayName}}</option>
+                                            {{end}}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select class="model-select" data-agent="{{$agent}}">
+                                            {{range $providers}}
+                                            {{if eq $cfg.Provider .Name}}
+                                            {{range .Models}}
+                                            <option value="{{.ID}}" {{if eq $cfg.Model .ID}}selected{{end}}>{{.Name}}</option>
+                                            {{end}}
+                                            {{end}}
+                                            {{end}}
+                                        </select>
+                                    </td>
+                                    <td class="status-cell">
+                                        {{if index $apiStatus $cfg.Provider}}
+                                        <span class="status-badge configured">Ready</span>
+                                        {{else}}
+                                        <span class="status-badge missing">No API Key</span>
+                                        {{end}}
+                                    </td>
+                                </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="saveProviderConfigs()">Save Provider Settings</button>
+                        <span id="provider-save-status" class="save-status"></span>
+                    </div>
+                </div>
+
+                {{if .SettingsStats}}
+                <div class="settings-section">
+                    <h2>Database Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-value">{{.SettingsStats.TotalTickets}}</span>
+                            <span class="stat-label">Total Tickets</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">{{.SettingsStats.ActiveRuns}}</span>
+                            <span class="stat-label">Active Runs</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">{{.SettingsStats.CompletedRuns}}</span>
+                            <span class="stat-label">Completed Runs</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">{{.SettingsStats.AuditEntries}}</span>
+                            <span class="stat-label">Audit Entries</span>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </main>
+    </div>
+    <script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+
+    // Provider models data (embedded from server)
+    const providerModels = {
+        {{range .Providers}}
+        "{{.Name}}": [
+            {{range .Models}}
+            { id: "{{.ID}}", name: "{{.Name}}" },
+            {{end}}
+        ],
+        {{end}}
+    };
+
+    // API key status
+    const apiKeyStatus = {
+        {{range $name, $configured := .APIKeyStatus}}
+        "{{$name}}": {{$configured}},
+        {{end}}
+    };
+
+    // Update model dropdown when provider changes
+    function updateModelOptions(providerSelect) {
+        const agent = providerSelect.dataset.agent;
+        const provider = providerSelect.value;
+        const modelSelect = document.querySelector(`.model-select[data-agent="${agent}"]`);
+        const statusCell = providerSelect.closest('tr').querySelector('.status-cell');
+
+        // Clear existing options
+        modelSelect.innerHTML = '';
+
+        // Add new options for selected provider
+        const models = providerModels[provider] || [];
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            modelSelect.appendChild(option);
+        });
+
+        // Update status badge
+        if (apiKeyStatus[provider]) {
+            statusCell.innerHTML = '<span class="status-badge configured">Ready</span>';
+        } else {
+            statusCell.innerHTML = '<span class="status-badge missing">No API Key</span>';
+        }
+    }
+
+    // Save all provider configurations
+    async function saveProviderConfigs() {
+        const configs = [];
+        const rows = document.querySelectorAll('#agent-config-body tr');
+
+        rows.forEach(row => {
+            const agent = row.dataset.agent;
+            const provider = row.querySelector('.provider-select').value;
+            const model = row.querySelector('.model-select').value;
+            configs.push({ agent_type: agent, provider: provider, model: model });
+        });
+
+        const statusEl = document.getElementById('provider-save-status');
+        statusEl.textContent = 'Saving...';
+
+        try {
+            const response = await fetch('/api/settings/providers', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ configs: configs })
+            });
+
+            if (response.ok) {
+                statusEl.textContent = 'Saved!';
+                statusEl.className = 'save-status success';
+            } else {
+                const data = await response.json();
+                statusEl.textContent = 'Error: ' + (data.error || 'Unknown error');
+                statusEl.className = 'save-status error';
+            }
+        } catch (err) {
+            statusEl.textContent = 'Error: ' + err.message;
+            statusEl.className = 'save-status error';
+        }
+
+        setTimeout(() => {
+            statusEl.textContent = '';
+            statusEl.className = 'save-status';
+        }, 3000);
+    }
+
+    // Orchestrator control functions
+    async function fetchOrchestratorStatus() {
+        try {
+            const response = await fetch('/api/orchestrator/status');
+            const status = await response.json();
+            updateOrchestratorUI(status);
+        } catch (err) {
+            console.error('Failed to fetch orchestrator status:', err);
+        }
+    }
+
+    function updateOrchestratorUI(status) {
+        const indicator = document.getElementById('orch-status-indicator');
+        const metrics = document.getElementById('orch-metrics');
+        const startBtn = document.getElementById('btn-start-orch');
+        const stopBtn = document.getElementById('btn-stop-orch');
+        const statusDot = indicator.querySelector('.status-dot');
+        const statusText = indicator.querySelector('.status-text');
+
+        if (status.running) {
+            statusDot.className = 'status-dot running';
+            statusText.textContent = 'Running';
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            metrics.style.display = 'flex';
+
+            // Update metrics
+            document.getElementById('orch-uptime').textContent = status.uptime || '-';
+            if (status.metrics) {
+                document.getElementById('orch-cycles').textContent = status.metrics.cyclesRun || 0;
+                document.getElementById('orch-spawned').textContent = status.metrics.agentsSpawned || 0;
+            }
+        } else {
+            statusDot.className = 'status-dot stopped';
+            statusText.textContent = 'Stopped';
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            metrics.style.display = 'none';
+        }
+    }
+
+    async function startOrchestrator() {
+        const btn = document.getElementById('btn-start-orch');
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+
+        try {
+            const response = await fetch('/api/orchestrator/start', { method: 'POST' });
+            const result = await response.json();
+
+            if (response.ok) {
+                fetchOrchestratorStatus();
+            } else {
+                alert('Failed to start orchestrator: ' + (result.message || result.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Failed to start orchestrator: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Start Orchestrator';
+        }
+    }
+
+    async function stopOrchestrator() {
+        if (!confirm('Are you sure you want to stop the orchestrator? Active agents will be interrupted.')) {
+            return;
+        }
+
+        const btn = document.getElementById('btn-stop-orch');
+        btn.disabled = true;
+        btn.textContent = 'Stopping...';
+
+        try {
+            const response = await fetch('/api/orchestrator/stop', { method: 'POST' });
+            const result = await response.json();
+
+            if (response.ok) {
+                fetchOrchestratorStatus();
+            } else {
+                alert('Failed to stop orchestrator: ' + (result.message || result.error || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('Failed to stop orchestrator: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Stop Orchestrator';
+        }
+    }
+
+    // Fetch status on page load
+    document.addEventListener('DOMContentLoaded', fetchOrchestratorStatus);
+
+    // Refresh status periodically when page is visible
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            fetchOrchestratorStatus();
+        }
+    }, 5000);
+
+    // Listen for SSE events to update status
+    document.body.addEventListener('htmx:sseMessage', function(evt) {
+        const message = evt.detail.data;
+        if (message === 'orchestrator:started' || message === 'orchestrator:stopped') {
+            fetchOrchestratorStatus();
+        }
+    });
+    </script>
+</body>
+</html>
+{{end}}

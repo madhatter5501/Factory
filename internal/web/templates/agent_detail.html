@@ -1,0 +1,186 @@
+{{define "agent_detail.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Run {{.Run.ID}} | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <!-- Global Status Bar -->
+    {{template "global_status" .}}
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo">
+            <span class="logo-icon">{{icon "activity"}}</span>
+            <span class="logo-text">Factory</span>
+        </div>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">{{icon "layers"}}</button>
+    </header>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">{{icon "activity"}}</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">
+                    <span class="nav-icon">{{icon "layout"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Execution</span>
+                        <span class="nav-contract">Work items & flow</span>
+                    </span>
+                </a></li>
+                <li><a href="/agents" class="active">
+                    <span class="nav-icon">{{icon "bot"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Agents</span>
+                        <span class="nav-contract">Actors & capabilities</span>
+                    </span>
+                </a></li>
+                <li><a href="/settings">
+                    <span class="nav-icon">{{icon "settings"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Policies</span>
+                        <span class="nav-contract">Thresholds & rules</span>
+                    </span>
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/new" class="btn btn-primary">{{icon "plus"}} New Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            <div class="agent-detail-page">
+                <div class="page-header">
+                    <a href="/agents" class="back-link">&larr; Back to Agents</a>
+                    <h1>&#129302; {{.Run.Agent}} Run</h1>
+                </div>
+
+                <div class="run-overview">
+                    <div class="run-info-card">
+                        <div class="run-info-header">
+                            <span class="run-status status-{{.Run.Status}}">{{.Run.Status}}</span>
+                            <span class="run-id">Run ID: {{.Run.ID}}</span>
+                        </div>
+                        <div class="run-info-body">
+                            <div class="info-row">
+                                <span class="label">Ticket:</span>
+                                <a href="/tickets/{{.Run.TicketID}}">{{.Run.TicketID}}</a>
+                            </div>
+                            {{if .Run.Worktree}}
+                            <div class="info-row">
+                                <span class="label">Worktree:</span>
+                                <span>{{.Run.Worktree}}</span>
+                            </div>
+                            {{end}}
+                            <div class="info-row">
+                                <span class="label">Started:</span>
+                                <span>{{.Run.StartedAt | formatTime}}</span>
+                            </div>
+                            {{if .Run.EndedAt}}
+                            <div class="info-row">
+                                <span class="label">Ended:</span>
+                                <span>{{.Run.EndedAt | formatTime}}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Duration:</span>
+                                <span>{{.Run.Duration}}</span>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+
+                    {{if .Run.Error}}
+                    <div class="error-banner">
+                        <strong>Error:</strong> {{.Run.Error}}
+                    </div>
+                    {{end}}
+                </div>
+
+                <div class="audit-section">
+                    <h2>Audit Log</h2>
+                    <p class="section-subtitle">Complete history of agent prompts, responses, and actions</p>
+
+                    {{if .AuditEntries}}
+                    <div class="audit-timeline">
+                        {{range .AuditEntries}}
+                        <div class="audit-entry audit-{{.EventType}}">
+                            <div class="audit-entry-header">
+                                <span class="event-type event-{{.EventType}}">{{.EventType}}</span>
+                                <span class="event-time">{{.CreatedAt | formatTime}}</span>
+                            </div>
+
+                            {{if eq .EventType "prompt_sent"}}
+                            <div class="audit-entry-body">
+                                <div class="prompt-section">
+                                    <h4>Prompt Sent to Agent</h4>
+                                    <pre class="code-block prompt-text">{{.EventData}}</pre>
+                                </div>
+                            </div>
+                            {{end}}
+
+                            {{if eq .EventType "response_received"}}
+                            <div class="audit-entry-body">
+                                <div class="response-section">
+                                    <h4>Agent Response</h4>
+                                    <div class="token-stats">
+                                        <span class="stat">&#128228; {{.TokenInput}} tokens in</span>
+                                        <span class="stat">&#128229; {{.TokenOutput}} tokens out</span>
+                                        <span class="stat">&#9202; {{.DurationMs}}ms</span>
+                                    </div>
+                                    <pre class="code-block response-text">{{.EventData}}</pre>
+                                </div>
+                            </div>
+                            {{end}}
+
+                            {{if eq .EventType "tool_call"}}
+                            <div class="audit-entry-body">
+                                <div class="tool-section">
+                                    <h4>Tool Call</h4>
+                                    <pre class="code-block tool-text">{{.EventData}}</pre>
+                                </div>
+                            </div>
+                            {{end}}
+
+                            {{if eq .EventType "error"}}
+                            <div class="audit-entry-body">
+                                <div class="error-section">
+                                    <h4>Error</h4>
+                                    <pre class="code-block error-text">{{.EventData}}</pre>
+                                </div>
+                            </div>
+                            {{end}}
+                        </div>
+                        {{end}}
+                    </div>
+                    {{else}}
+                    <div class="empty-state">
+                        <p>No audit entries recorded for this run.</p>
+                    </div>
+                    {{end}}
+                </div>
+
+                {{if .Run.Output}}
+                <div class="output-section">
+                    <h2>Agent Output</h2>
+                    <pre class="code-block output-text">{{.Run.Output}}</pre>
+                </div>
+                {{end}}
+            </div>
+        </main>
+    </div>
+    <script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+    </script>
+</body>
+</html>
+{{end}}

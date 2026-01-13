@@ -1,0 +1,430 @@
+{{define "wizard.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo">
+            <span class="logo-icon">⚙️</span>
+            <span class="logo-text">Factory</span>
+        </div>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">☰</button>
+    </header>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">⚙️</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">
+                    <span class="nav-icon">📋</span> Board
+                </a></li>
+                <li><a href="/agents">
+                    <span class="nav-icon">🤖</span> Agents
+                </a></li>
+                <li><a href="/settings">
+                    <span class="nav-icon">⚙️</span> Settings
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/wizard" class="btn btn-primary btn-wizard">✨ Wizard</a>
+                <a href="/new" class="btn btn-secondary btn-sm">+ Quick Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            {{if .Step}}
+            <div class="wizard-page">
+                <div class="page-header">
+                    <a href="/" class="back-link">← Back to Board</a>
+                    <h1>Solutions Architect Wizard</h1>
+                    <p class="subtitle">Transform your idea into a well-formed ticket specification</p>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="wizard-progress">
+                    <div class="progress-step {{if ge .Step 1}}active{{end}} {{if gt .Step 1}}completed{{end}}" data-step="1">
+                        <span class="step-number">1</span>
+                        <span class="step-label">Problem</span>
+                    </div>
+                    <div class="progress-connector {{if gt .Step 1}}completed{{end}}"></div>
+                    <div class="progress-step {{if ge .Step 2}}active{{end}} {{if gt .Step 2}}completed{{end}}" data-step="2">
+                        <span class="step-number">2</span>
+                        <span class="step-label">Technical</span>
+                    </div>
+                    <div class="progress-connector {{if gt .Step 2}}completed{{end}}"></div>
+                    <div class="progress-step {{if ge .Step 3}}active{{end}} {{if gt .Step 3}}completed{{end}}" data-step="3">
+                        <span class="step-number">3</span>
+                        <span class="step-label">Criteria</span>
+                    </div>
+                    <div class="progress-connector {{if gt .Step 3}}completed{{end}}"></div>
+                    <div class="progress-step {{if ge .Step 4}}active{{end}}" data-step="4">
+                        <span class="step-number">4</span>
+                        <span class="step-label">Review</span>
+                    </div>
+                </div>
+
+                <form id="wizard-form" class="wizard-form" hx-post="/api/wizard" hx-swap="innerHTML" hx-target="#wizard-content">
+                    <input type="hidden" name="step" value="{{.Step}}">
+                    <input type="hidden" name="session_id" value="{{.SessionID}}">
+
+                    <div id="wizard-content" class="wizard-content">
+                        {{if eq .Step 1}}
+                        <!-- Phase 1: Problem Understanding -->
+                        <div class="wizard-phase">
+                            <h2>Phase 1: Understanding the Problem</h2>
+                            <p class="phase-description">Let's start by understanding what you want to build and why.</p>
+
+                            <div class="form-group">
+                                <label for="raw_idea">What's the idea or problem?</label>
+                                <textarea id="raw_idea" name="raw_idea" rows="4" required
+                                          placeholder="Describe what you want to build or fix...">{{.Data.RawIdea}}</textarea>
+                                <span class="form-hint">Be as detailed as you'd like - we'll refine it together.</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="problem_statement">Who experiences this problem?</label>
+                                <input type="text" id="problem_statement" name="problem_statement"
+                                       value="{{.Data.ProblemStatement}}"
+                                       placeholder="e.g., Users who need to export reports, Admins managing permissions...">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="desired_outcome">What's the desired outcome?</label>
+                                <textarea id="desired_outcome" name="desired_outcome" rows="2"
+                                          placeholder="What should users be able to do when this is complete?">{{.Data.DesiredOutcome}}</textarea>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ticket_type">Type of work</label>
+                                    <select id="ticket_type" name="ticket_type">
+                                        <option value="">Select type...</option>
+                                        <option value="feature" {{if eq .Data.Type "feature"}}selected{{end}}>New Feature</option>
+                                        <option value="enhancement" {{if eq .Data.Type "enhancement"}}selected{{end}}>Enhancement</option>
+                                        <option value="bugfix" {{if eq .Data.Type "bugfix"}}selected{{end}}>Bug Fix</option>
+                                        <option value="refactor" {{if eq .Data.Type "refactor"}}selected{{end}}>Refactor</option>
+                                        <option value="infrastructure" {{if eq .Data.Type "infrastructure"}}selected{{end}}>Infrastructure</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="priority">Priority</label>
+                                    <select id="priority" name="priority">
+                                        <option value="medium" {{if eq .Data.Priority "medium"}}selected{{end}}>Medium</option>
+                                        <option value="critical" {{if eq .Data.Priority "critical"}}selected{{end}}>Critical</option>
+                                        <option value="high" {{if eq .Data.Priority "high"}}selected{{end}}>High</option>
+                                        <option value="low" {{if eq .Data.Priority "low"}}selected{{end}}>Low</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="out_of_scope">What's explicitly OUT of scope?</label>
+                                <textarea id="out_of_scope" name="out_of_scope" rows="2"
+                                          placeholder="e.g., Mobile app support, Integration with external systems...">{{.Data.OutOfScope}}</textarea>
+                                <span class="form-hint">Helps prevent scope creep.</span>
+                            </div>
+                        </div>
+
+                        {{else if eq .Step 2}}
+                        <!-- Phase 2: Technical Discovery -->
+                        <div class="wizard-phase">
+                            <h2>Phase 2: Technical Discovery</h2>
+                            <p class="phase-description">Let's understand the technical landscape for this work.</p>
+
+                            <div class="form-group">
+                                <label for="domain">Primary Domain</label>
+                                <select id="domain" name="domain" required>
+                                    <option value="">Select domain...</option>
+                                    <option value="frontend" {{if eq .Data.Domain "frontend"}}selected{{end}}>Frontend</option>
+                                    <option value="backend" {{if eq .Data.Domain "backend"}}selected{{end}}>Backend</option>
+                                    <option value="infra" {{if eq .Data.Domain "infra"}}selected{{end}}>Infrastructure</option>
+                                    <option value="database" {{if eq .Data.Domain "database"}}selected{{end}}>Database</option>
+                                    <option value="shared" {{if eq .Data.Domain "shared"}}selected{{end}}>Shared/Cross-cutting</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Technology Stack</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="dotnet" {{if contains .Data.Stack "dotnet"}}checked{{end}}>
+                                        .NET / C#
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="go" {{if contains .Data.Stack "go"}}checked{{end}}>
+                                        Go
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="typescript" {{if contains .Data.Stack "typescript"}}checked{{end}}>
+                                        TypeScript
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="vue" {{if contains .Data.Stack "vue"}}checked{{end}}>
+                                        Vue
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="lit" {{if contains .Data.Stack "lit"}}checked{{end}}>
+                                        Lit / Web Components
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="postgres" {{if contains .Data.Stack "postgres"}}checked{{end}}>
+                                        PostgreSQL
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="redis" {{if contains .Data.Stack "redis"}}checked{{end}}>
+                                        Redis
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="kubernetes" {{if contains .Data.Stack "kubernetes"}}checked{{end}}>
+                                        Kubernetes
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="stack[]" value="azure" {{if contains .Data.Stack "azure"}}checked{{end}}>
+                                        Azure
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="affected_paths">Affected Paths</label>
+                                <textarea id="affected_paths" name="affected_paths" rows="3"
+                                          placeholder="e.g., apps/platform-host/Controllers/&#10;packages/web/my-component/&#10;agents/metrics-agent/">{{.Data.AffectedPaths}}</textarea>
+                                <span class="form-hint">One path per line. Leave blank if unsure.</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="patterns_to_follow">Existing Patterns to Follow</label>
+                                <input type="text" id="patterns_to_follow" name="patterns_to_follow"
+                                       value="{{.Data.PatternsToFollow}}"
+                                       placeholder="e.g., See apps/platform-host/Controllers/ExampleController.cs">
+                                <span class="form-hint">Reference similar implementations in the codebase.</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="integrations">External Integrations</label>
+                                <input type="text" id="integrations" name="integrations"
+                                       value="{{.Data.Integrations}}"
+                                       placeholder="e.g., Auth0, Stripe, SendGrid, Azure Service Bus...">
+                            </div>
+                        </div>
+
+                        {{else if eq .Step 3}}
+                        <!-- Phase 3: Acceptance Criteria -->
+                        <div class="wizard-phase">
+                            <h2>Phase 3: Acceptance Criteria</h2>
+                            <p class="phase-description">Define what "done" looks like for this work.</p>
+
+                            <div class="form-group">
+                                <label>Functional Requirements</label>
+                                <div id="criteria-list" class="criteria-inputs">
+                                    {{range $i, $c := .Data.AcceptanceCriteria}}
+                                    <div class="criteria-input">
+                                        <input type="text" name="criteria[]" value="{{$c}}" placeholder="Given/When/Then...">
+                                        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
+                                    </div>
+                                    {{else}}
+                                    <div class="criteria-input">
+                                        <input type="text" name="criteria[]" placeholder="Given X, when Y, then Z">
+                                        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
+                                    </div>
+                                    {{end}}
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="addCriteria()">
+                                    + Add Criterion
+                                </button>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="performance">Performance Requirements</label>
+                                <input type="text" id="performance" name="performance"
+                                       value="{{.Data.Performance}}"
+                                       placeholder="e.g., Response time < 200ms, Handle 1000 concurrent users...">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Security Considerations</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="security[]" value="auth_required" {{if contains .Data.Security "auth_required"}}checked{{end}}>
+                                        Requires authentication
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="security[]" value="tenant_scoped" {{if contains .Data.Security "tenant_scoped"}}checked{{end}}>
+                                        Tenant-scoped data
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="security[]" value="pii_handling" {{if contains .Data.Security "pii_handling"}}checked{{end}}>
+                                        Handles PII
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="security[]" value="audit_logging" {{if contains .Data.Security "audit_logging"}}checked{{end}}>
+                                        Needs audit logging
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="accessibility">Accessibility Requirements</label>
+                                <select id="accessibility" name="accessibility">
+                                    <option value="wcag_aa" {{if eq .Data.Accessibility "wcag_aa"}}selected{{end}}>WCAG 2.1 AA (Default)</option>
+                                    <option value="wcag_aaa" {{if eq .Data.Accessibility "wcag_aaa"}}selected{{end}}>WCAG 2.1 AAA</option>
+                                    <option value="none" {{if eq .Data.Accessibility "none"}}selected{{end}}>N/A (Backend only)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="testing_notes">Testing Notes</label>
+                                <textarea id="testing_notes" name="testing_notes" rows="2"
+                                          placeholder="Any specific testing requirements or manual verification steps...">{{.Data.TestingNotes}}</textarea>
+                            </div>
+                        </div>
+
+                        {{else if eq .Step 4}}
+                        <!-- Phase 4: Review & Submit -->
+                        <div class="wizard-phase">
+                            <h2>Phase 4: Review & Finalize</h2>
+                            <p class="phase-description">Review your ticket specification before creating it.</p>
+
+                            <div class="review-section">
+                                <h3>Problem Statement</h3>
+                                <div class="review-card">
+                                    <p><strong>{{.Data.RawIdea}}</strong></p>
+                                    <p class="text-muted">{{.Data.DesiredOutcome}}</p>
+                                    <div class="review-meta">
+                                        <span class="badge badge-{{.Data.Priority}}">{{.Data.Priority}}</span>
+                                        <span class="badge">{{.Data.Type}}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="review-section">
+                                <h3>Technical Context</h3>
+                                <div class="review-card">
+                                    <p><strong>Domain:</strong> {{.Data.Domain}}</p>
+                                    <p><strong>Stack:</strong> {{range .Data.Stack}}{{.}}, {{end}}</p>
+                                    {{if .Data.AffectedPaths}}<p><strong>Paths:</strong> {{.Data.AffectedPaths}}</p>{{end}}
+                                    {{if .Data.Integrations}}<p><strong>Integrations:</strong> {{.Data.Integrations}}</p>{{end}}
+                                </div>
+                            </div>
+
+                            <div class="review-section">
+                                <h3>Acceptance Criteria</h3>
+                                <div class="review-card">
+                                    <ul class="criteria-list">
+                                        {{range .Data.AcceptanceCriteria}}
+                                        <li>{{.}}</li>
+                                        {{else}}
+                                        <li class="text-muted">No criteria defined</li>
+                                        {{end}}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="size">Estimated Size</label>
+                                    <select id="size" name="size">
+                                        <option value="S" {{if eq .Data.Size "S"}}selected{{end}}>S - Small (hours)</option>
+                                        <option value="M" {{if eq .Data.Size "M"}}selected{{end}}>M - Medium (1-2 days)</option>
+                                        <option value="L" {{if eq .Data.Size "L"}}selected{{end}}>L - Large (3-5 days)</option>
+                                        <option value="XL" {{if eq .Data.Size "XL"}}selected{{end}}>XL - Extra Large (1+ week)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Reviewers Needed</label>
+                                    <div class="checkbox-group horizontal">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="reviewers[]" value="security" {{if contains .Data.Reviewers "security"}}checked{{end}}>
+                                            Security
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="reviewers[]" value="ux" {{if contains .Data.Reviewers "ux"}}checked{{end}}>
+                                            UX
+                                        </label>
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" name="reviewers[]" value="data" {{if contains .Data.Reviewers "data"}}checked{{end}}>
+                                            Data
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="uncertainty">Areas of Uncertainty</label>
+                                <textarea id="uncertainty" name="uncertainty" rows="2"
+                                          placeholder="Any questions for domain experts or areas needing investigation...">{{.Data.Uncertainty}}</textarea>
+                            </div>
+
+                            <div class="review-callout">
+                                <p><strong>Ready to create?</strong> The autonomous agents will:</p>
+                                <ol>
+                                    <li>Create a feature branch</li>
+                                    <li>Implement based on these specs</li>
+                                    <li>Run security and UX reviews</li>
+                                    <li>Submit for your final approval</li>
+                                </ol>
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <div class="wizard-actions">
+                        {{if gt .Step 1}}
+                        <button type="button" class="btn btn-secondary"
+                                hx-post="/api/wizard" hx-vals='{"action": "back"}' hx-swap="outerHTML" hx-target=".wizard-page">
+                            ← Back
+                        </button>
+                        {{else}}
+                        <a href="/" class="btn btn-secondary">Cancel</a>
+                        {{end}}
+
+                        {{if lt .Step 4}}
+                        <button type="submit" class="btn btn-primary" name="action" value="next">
+                            Continue →
+                        </button>
+                        {{else}}
+                        <button type="submit" class="btn btn-primary btn-success" name="action" value="create">
+                            Create Ticket
+                        </button>
+                        {{end}}
+                    </div>
+                </form>
+            </div>
+
+            <script>
+            function addCriteria() {
+                const list = document.getElementById('criteria-list');
+                const count = list.children.length + 1;
+                const div = document.createElement('div');
+                div.className = 'criteria-input';
+                div.innerHTML = `
+                    <input type="text" name="criteria[]" placeholder="Given/When/Then...">
+                    <button type="button" class="btn-remove" onclick="this.parentElement.remove()">×</button>
+                `;
+                list.appendChild(div);
+            }
+            </script>
+            {{end}}{{/* end if .Step */}}
+        </main>
+    </div>
+    <script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+    </script>
+</body>
+</html>
+{{end}}
