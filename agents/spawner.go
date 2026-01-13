@@ -192,7 +192,7 @@ func (s *Spawner) runClaude(ctx context.Context, prompt string, workDir string, 
 		args = append(args, "--model", model)
 	}
 
-	cmd := exec.CommandContext(ctx, s.claudePath, args...) //nolint:gosec // claudePath is validated at construction time
+	cmd := exec.CommandContext(ctx, s.claudePath, args...) // #nosec G204 -- claudePath is validated at construction time
 
 	cmd.Dir = workDir
 	cmd.Stdin = strings.NewReader(prompt)
@@ -253,7 +253,7 @@ func (s *Spawner) renderPrompt(agentType AgentType, data PromptData) (string, er
 	promptFile := filepath.Join(s.promptsDir, string(agentType)+".md")
 
 	// Read main template
-	templateBytes, err := os.ReadFile(promptFile)
+	templateBytes, err := os.ReadFile(promptFile) // #nosec G304 -- promptsDir from internal config
 	if err != nil {
 		return "", fmt.Errorf("failed to read prompt template %s: %w", promptFile, err)
 	}
@@ -269,6 +269,7 @@ func (s *Spawner) renderPrompt(agentType AgentType, data PromptData) (string, er
 
 	// Load shared-rules.md as a named template for {{template "shared-rules.md" .}}
 	sharedRulesPath := filepath.Join(s.promptsDir, "shared-rules.md")
+	// #nosec G304 -- promptsDir is from internal config, not user input
 	if sharedRulesBytes, err := os.ReadFile(sharedRulesPath); err == nil {
 		_, err = tmpl.New("shared-rules.md").Parse(string(sharedRulesBytes))
 		if err != nil {
@@ -282,6 +283,7 @@ func (s *Spawner) renderPrompt(agentType AgentType, data PromptData) (string, er
 		for _, entry := range entries {
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
 				expertPath := filepath.Join(expertsDir, entry.Name())
+				// #nosec G304 -- path from internal config, not user input
 				if expertBytes, err := os.ReadFile(expertPath); err == nil {
 					_, _ = tmpl.New(entry.Name()).Parse(string(expertBytes))
 				}

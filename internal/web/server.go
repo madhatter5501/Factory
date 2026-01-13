@@ -292,13 +292,13 @@ func templateFuncs() template.FuncMap {
 		"markdown": func(s string) template.HTML {
 			var buf bytes.Buffer
 			if err := goldmark.Convert([]byte(s), &buf); err != nil {
-				return template.HTML(template.HTMLEscapeString(s)) //nolint:gosec // Explicitly escaped
+				return template.HTML(template.HTMLEscapeString(s)) // #nosec G203 -- explicitly escaped
 			}
-			return template.HTML(buf.String()) //nolint:gosec // goldmark produces safe HTML
+			return template.HTML(buf.String()) // #nosec G203 -- goldmark produces safe HTML
 		},
 		// Lucide icon rendering.
 		"icon": func(name string) template.HTML {
-			return template.HTML(fmt.Sprintf( //nolint:gosec // Icon names are from internal code
+			return template.HTML(fmt.Sprintf( // #nosec G203 -- icon names are from internal code
 				`<svg class="icon icon-%s"><use href="/static/icons/lucide.svg#%s"></use></svg>`,
 				name, name))
 		},

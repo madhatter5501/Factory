@@ -88,7 +88,7 @@ func (idx *Indexer) IndexExpertPrompts(ctx context.Context, promptsDir string) e
 
 // processExpertPrompt extracts chunks from an expert prompt file.
 func (idx *Indexer) processExpertPrompt(_ context.Context, path, domain string) ([]Chunk, error) {
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(path) // #nosec G304 -- path from internal config
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (idx *Indexer) IndexCodePatterns(ctx context.Context, repoPath string, patt
 		}
 
 		for _, match := range matches {
-			content, err := os.ReadFile(match)
+			content, err := os.ReadFile(match) // #nosec G304 -- match from internal filepath.Glob
 			if err != nil {
 				continue
 			}

@@ -45,6 +45,7 @@ func NewPromptBuilder(promptsDir string) (*PromptBuilder, error) {
 
 	// Load shared rules
 	sharedPath := filepath.Join(promptsDir, "shared-rules.md")
+	// #nosec G304 -- promptsDir is from internal config, not user input
 	if content, err := os.ReadFile(sharedPath); err == nil {
 		pb.sharedRules = string(content)
 	}
@@ -55,7 +56,7 @@ func NewPromptBuilder(promptsDir string) (*PromptBuilder, error) {
 		for _, entry := range entries {
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
 				domain := strings.TrimSuffix(entry.Name(), ".md")
-				content, err := os.ReadFile(filepath.Join(expertsDir, entry.Name()))
+				content, err := os.ReadFile(filepath.Join(expertsDir, entry.Name())) // #nosec G304 -- path from internal config
 				if err == nil {
 					pb.expertKnowledge[domain] = string(content)
 				}
@@ -126,7 +127,7 @@ func (pb *PromptBuilder) BuildCachedPrompt(agentType string, data AgentPromptDat
 
 	// Load agent-specific template
 	promptFile := filepath.Join(pb.promptsDir, agentType+".md")
-	templateBytes, err := os.ReadFile(promptFile)
+	templateBytes, err := os.ReadFile(promptFile) // #nosec G304 -- promptsDir from internal config
 	if err != nil {
 		return nil, fmt.Errorf("failed to read prompt template %s: %w", promptFile, err)
 	}

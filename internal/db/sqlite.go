@@ -20,7 +20,7 @@ type DB struct {
 func Open(dbPath string) (*DB, error) {
 	// Ensure directory exists
 	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
@@ -31,13 +31,13 @@ func Open(dbPath string) (*DB, error) {
 
 	// Enable WAL mode for better concurrency
 	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
+		_ = db.Close() // Ignore close error since we're returning the primary error
 		return nil, fmt.Errorf("failed to enable WAL: %w", err)
 	}
 
 	// Enable foreign keys
 	if _, err := db.Exec("PRAGMA foreign_keys=ON"); err != nil {
-		db.Close()
+		_ = db.Close() // Ignore close error since we're returning the primary error
 		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func Open(dbPath string) (*DB, error) {
 
 	// Run migrations
 	if err := d.migrate(); err != nil {
-		db.Close()
+		_ = db.Close() // Ignore close error since we're returning the primary error
 		return nil, fmt.Errorf("migration failed: %w", err)
 	}
 
