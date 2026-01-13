@@ -1,0 +1,46 @@
+# Build output
+bin/
+factory
+factory-server
+*.exe
+
+# Runtime data (created by factory)
+*.db
+*.db.backup
+*.db-journal
+*.db-shm
+*.db-wal
+kanban.json
+rag.db
+
+# Git worktrees (created at runtime for ticket isolation)
+.worktrees/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test and coverage
+coverage.out
+coverage.html
+*.test
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,41 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">⚙️</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/" class="{{if eq .Title "Factory Dashboard"}}active{{end}}">
+                    <span class="nav-icon">📋</span> Board
+                </a></li>
+                <li><a href="/agents" class="{{if eq .Title "Agents"}}active{{end}}">
+                    <span class="nav-icon">🤖</span> Agents
+                </a></li>
+                <li><a href="/settings" class="{{if eq .Title "Settings"}}active{{end}}">
+                    <span class="nav-icon">⚙️</span> Settings
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/wizard" class="btn btn-primary btn-wizard">✨ Wizard</a>
+                <a href="/new" class="btn btn-secondary btn-sm">+ Quick Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            {{block "content" .}}{{end}}
+        </main>
+    </div>
+    <div id="toast-container"></div>
+</body>
+</html>
+{{end}}

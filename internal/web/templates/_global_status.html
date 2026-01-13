@@ -1,0 +1,29 @@
+{{define "global_status"}}
+<header class="global-status-bar" hx-get="/partials/status" hx-trigger="sse:health-update" hx-swap="innerHTML">
+    <div class="status-bar-left">
+        <h1 class="factory-state">
+            <span class="factory-name">Factory</span>
+            {{if .SystemHealth}}
+            <span class="state-separator">·</span>
+            <span class="state-label {{.SystemHealth.Status | healthStatusClass}}" title="{{.SystemHealth.Message}}">
+                {{icon (.SystemHealth.Status | healthIcon)}}
+                {{.SystemHealth.StatusLabel}}
+            </span>
+            {{else}}
+            <span class="state-separator">·</span>
+            <span class="state-label health-stable">
+                {{icon "check-circle"}}
+                Loading...
+            </span>
+            {{end}}
+        </h1>
+    </div>
+    <div class="status-bar-stats">
+        {{if .Stats}}
+        {{range $status, $count := .Stats}}
+        <span class="stat-badge stat-{{$status | statusColor}}">{{$status | statusDisplayName}}: {{$count}}</span>
+        {{end}}
+        {{end}}
+    </div>
+</header>
+{{end}}

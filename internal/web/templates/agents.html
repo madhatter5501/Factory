@@ -1,0 +1,1106 @@
+{{define "agents.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agents | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+    <style>
+        /* Slide-out Panel Styles - Full Width Monaco Editor */
+        .slide-panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 999;
+        }
+
+        .slide-panel-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .slide-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 75vw;
+            max-width: 1200px;
+            min-width: 600px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide-panel.open {
+            transform: translateX(0);
+        }
+
+        .slide-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--bg-tertiary);
+            background: var(--bg-primary);
+            flex-shrink: 0;
+        }
+
+        .slide-panel-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .override-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.625rem;
+            background: var(--color-warning);
+            color: #000;
+            border-radius: 9999px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .default-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.625rem;
+            background: var(--bg-tertiary);
+            color: var(--color-muted);
+            border-radius: 9999px;
+            font-size: 0.6875rem;
+            font-weight: 500;
+        }
+
+        .slide-panel-close {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--color-muted);
+            border-radius: 0.375rem;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .slide-panel-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--color-text);
+        }
+
+        .slide-panel-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .editor-container {
+            flex: 1;
+            min-height: 0;
+            border: 1px solid var(--bg-tertiary);
+            border-radius: 0;
+        }
+
+        .slide-panel-footer {
+            padding: 0.75rem 1.25rem;
+            border-top: 1px solid var(--bg-tertiary);
+            background: var(--bg-primary);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-muted);
+            font-size: 0.75rem;
+        }
+
+        .footer-right {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* Agent Card Edit Button */
+        .agent-status-card {
+            position: relative;
+        }
+
+        .agent-edit-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: var(--bg-tertiary);
+            border: none;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            color: var(--color-muted);
+            opacity: 0;
+            transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+        }
+
+        .agent-status-card:hover .agent-edit-btn {
+            opacity: 1;
+        }
+
+        .agent-edit-btn:hover {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        /* Status Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 0.875rem 1.25rem;
+            background: var(--success);
+            color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            z-index: 1001;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: var(--error);
+        }
+
+        /* Model Badge */
+        .agent-model-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.125rem 0.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 9999px;
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            border: none;
+        }
+
+        .agent-model-badge.clickable {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .agent-model-badge.clickable:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .agent-model-badge .icon {
+            width: 0.75em;
+            height: 0.75em;
+            margin-left: 0.125rem;
+        }
+
+        /* Status indicator tooltip via title */
+        .status-indicator {
+            cursor: help;
+        }
+
+        .status-indicator.inactive {
+            background: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        /* Worktree overflow fix */
+        .run-worktree {
+            overflow: hidden;
+        }
+
+        .run-worktree code {
+            display: block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.6875rem;
+            background: var(--bg-primary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Model Selector Modal */
+        .model-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .model-modal-overlay.active {
+            display: flex;
+        }
+
+        .model-modal {
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            width: min(400px, 90vw);
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .model-modal-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .model-modal-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .model-modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .model-modal-body {
+            padding: 1rem;
+        }
+
+        .model-form-group {
+            margin-bottom: 1rem;
+        }
+
+        .model-form-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.375rem;
+        }
+
+        .model-form-group select,
+        .model-form-group input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .model-form-group select:focus,
+        .model-form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .model-modal-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Recent runs - compact cards */
+        .run-card {
+            position: relative;
+            padding: 0.625rem 0.75rem;
+        }
+
+        .run-header {
+            padding: 0;
+            margin-bottom: 0.375rem;
+        }
+
+        .run-body {
+            padding: 0;
+        }
+
+        .run-body p {
+            margin: 0.125rem 0;
+            font-size: 0.6875rem;
+        }
+
+        .run-actions {
+            margin-top: 0.375rem;
+            padding-top: 0.375rem;
+            display: flex;
+            gap: 0.375rem;
+        }
+
+        .run-actions .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.625rem;
+        }
+
+        /* Audit drawer extended styles (base in style.css) */
+        .audit-drawer-header .run-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .audit-drawer-header .run-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Compact runs list */
+        .runs-list.compact {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .runs-list.compact .run-card {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .runs-list.compact .run-header {
+            margin-bottom: 0.25rem;
+        }
+
+        .runs-list.compact .agent-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .runs-list.compact .run-status {
+            font-size: 0.625rem;
+            padding: 0.125rem 0.375rem;
+        }
+
+        /* Loading state */
+        .editor-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-muted);
+            font-size: 0.875rem;
+        }
+
+        .editor-loading svg {
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <!-- Global Status Bar -->
+    {{template "global_status" .}}
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo">
+            <span class="logo-icon">{{icon "activity"}}</span>
+            <span class="logo-text">Factory</span>
+        </div>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">{{icon "layers"}}</button>
+    </header>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">{{icon "activity"}}</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">
+                    <span class="nav-icon">{{icon "layout"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Execution</span>
+                        <span class="nav-contract">Work items & flow</span>
+                    </span>
+                </a></li>
+                <li><a href="/agents" class="active">
+                    <span class="nav-icon">{{icon "bot"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Agents</span>
+                        <span class="nav-contract">Actors & capabilities</span>
+                    </span>
+                </a></li>
+                <li><a href="/settings">
+                    <span class="nav-icon">{{icon "settings"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Policies</span>
+                        <span class="nav-contract">Thresholds & rules</span>
+                    </span>
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/new" class="btn btn-primary">{{icon "plus"}} New Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            <div class="agents-page">
+                <h1>Agent Status</h1>
+
+                <div class="agents-grid">
+                    <div class="agent-section">
+                        <h2>Active Runs</h2>
+                        <div id="active-runs" hx-get="/partials/active-runs" hx-trigger="sse:agent-update" hx-swap="innerHTML">
+                            {{if .Runs}}
+                            <div class="runs-list">
+                                {{range .Runs}}
+                                <div class="run-card run-{{.Status}}">
+                                    <div class="run-header">
+                                        <span class="agent-name">{{icon "bot"}} {{.Agent}}</span>
+                                        <span class="run-status status-{{.Status}}">{{.Status}}</span>
+                                    </div>
+                                    <div class="run-body">
+                                        <p><strong>Ticket:</strong> <a href="/tickets/{{.TicketID}}">{{.TicketID | ticketSlug}}</a></p>
+                                        {{if .Worktree}}
+                                        <p class="run-worktree" title="{{.Worktree}}"><strong>Worktree:</strong> <code>{{.Worktree | ticketSlug}}</code></p>
+                                        {{end}}
+                                        <p><strong>Started:</strong> {{.StartedAt | timeAgo}}</p>
+                                    </div>
+                                    {{if .Output}}
+                                    <div class="run-output">
+                                        <pre>{{.Output}}</pre>
+                                    </div>
+                                    {{end}}
+                                    <div class="run-actions">
+                                        <a href="/agents/{{.ID}}" class="btn btn-sm btn-secondary">View Details</a>
+                                    </div>
+                                </div>
+                                {{end}}
+                            </div>
+                            {{else}}
+                            <div class="empty-state">
+                                <p>No active agent runs.</p>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+
+                    <div class="agent-section">
+                        <h2>Recent Runs (Last 24h)</h2>
+                        {{if .RecentRuns}}
+                        <div class="runs-list compact">
+                            {{range .RecentRuns}}
+                            <div class="run-card run-{{.Status}}">
+                                <div class="run-header">
+                                    <span class="agent-name">{{icon "bot"}} {{.Agent}}</span>
+                                    <span class="run-status status-{{.Status}}">{{.Status}}</span>
+                                </div>
+                                <div class="run-body">
+                                    <p><strong>Ticket:</strong> <a href="/tickets/{{.TicketID}}">{{.TicketID | ticketSlug}}</a></p>
+                                    <p><strong>Duration:</strong> {{if not .EndedAt.IsZero}}{{durationBetween .StartedAt .EndedAt | formatDuration}}{{else}}In progress{{end}}</p>
+                                </div>
+                                <div class="run-actions">
+                                    <a href="/tickets/{{.TicketID}}" class="btn btn-sm btn-secondary">{{icon "external-link"}} Ticket</a>
+                                    <button class="btn btn-sm btn-secondary" onclick="openAuditDrawer('{{.ID}}', '{{.Agent}}', '{{.TicketID | ticketSlug}}')">
+                                        {{icon "file-text"}} Audit
+                                    </button>
+                                </div>
+                            </div>
+                            {{end}}
+                        </div>
+                        {{else}}
+                        <div class="empty-state">
+                            <p>No recent agent runs.</p>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <div class="agent-section">
+                        <h2>Agent Configuration</h2>
+                        <div class="background-agents">
+                            {{range .AgentDefs}}
+                            {{$config := index $.ProviderConfigs .type}}
+                            <div class="agent-status-card" data-agent-type="{{.type}}">
+                                <button class="agent-edit-btn" onclick="openPromptEditor('{{.type}}', '{{.name}}')" title="Edit System Prompt">
+                                    {{icon "pencil"}}
+                                </button>
+                                <span class="agent-icon">{{icon .icon}}</span>
+                                <div class="agent-info">
+                                    <h3>{{.name}}</h3>
+                                    <p>{{.desc}}</p>
+                                    {{if $config}}
+                                    <button class="agent-model-badge clickable" onclick="openModelSelector('{{.type}}', '{{.name}}')" title="Click to change model">
+                                        {{$config.Provider}} / {{$config.Model}}
+                                        {{icon "chevron-down"}}
+                                    </button>
+                                    {{else}}
+                                    <button class="agent-model-badge clickable" onclick="openModelSelector('{{.type}}', '{{.name}}')" title="Click to configure model">
+                                        Not configured {{icon "chevron-down"}}
+                                    </button>
+                                    {{end}}
+                                </div>
+                                <span class="status-indicator {{if $config}}active{{else}}inactive{{end}}" title="{{if $config}}Agent configured and ready{{else}}Agent not configured - click model badge to set up{{end}}"></span>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Slide-out Panel Overlay -->
+    <div class="slide-panel-overlay" onclick="closePromptEditor()"></div>
+
+    <!-- Slide-out Panel with Monaco Editor -->
+    <div class="slide-panel" id="promptPanel">
+        <div class="slide-panel-header">
+            <div class="header-info">
+                <h3>{{icon "code"}} <span id="panelAgentName">Agent</span> System Prompt</h3>
+                <span id="statusBadge" class="default-badge">Default</span>
+            </div>
+            <button class="slide-panel-close" onclick="closePromptEditor()">
+                {{icon "x"}}
+            </button>
+        </div>
+        <div class="slide-panel-body">
+            <div id="editorContainer" class="editor-container">
+                <div class="editor-loading">
+                    {{icon "loader"}} Loading editor...
+                </div>
+            </div>
+        </div>
+        <div class="slide-panel-footer">
+            <div class="footer-left">
+                <span id="promptHint">Edit and save to create a custom override</span>
+            </div>
+            <div class="footer-right">
+                <button class="btn btn-secondary" onclick="closePromptEditor()">Cancel</button>
+                <button id="revertBtn" class="btn btn-secondary" onclick="revertToDefault()" style="display: none;">{{icon "undo"}} Revert</button>
+                <button class="btn btn-primary" onclick="savePrompt()">{{icon "save"}} Save Override</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Model Selector Modal -->
+    <div class="model-modal-overlay" id="modelModalOverlay" onclick="closeModelSelector()">
+        <div class="model-modal" onclick="event.stopPropagation()">
+            <div class="model-modal-header">
+                <h3>{{icon "settings"}} Configure <span id="modelAgentName">Agent</span></h3>
+                <button class="model-modal-close" onclick="closeModelSelector()">{{icon "x"}}</button>
+            </div>
+            <div class="model-modal-body">
+                <div class="model-form-group">
+                    <label for="providerSelect">Provider</label>
+                    <select id="providerSelect" onchange="updateModelOptions()">
+                        <option value="anthropic">Anthropic</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="google">Google</option>
+                    </select>
+                </div>
+                <div class="model-form-group">
+                    <label for="modelSelect">Model</label>
+                    <select id="modelSelect">
+                        <!-- Options populated by JS -->
+                    </select>
+                </div>
+            </div>
+            <div class="model-modal-footer">
+                <button class="btn btn-secondary" onclick="closeModelSelector()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveModelConfig()">{{icon "check"}} Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Log Drawer (uses same structure as ticket page) -->
+    <div id="audit-drawer" class="audit-drawer">
+        <div class="audit-drawer-backdrop" onclick="closeAuditDrawer()"></div>
+        <div class="audit-drawer-content">
+            <div class="audit-drawer-header">
+                <h2>{{icon "file-text"}} Audit Log</h2>
+                <span class="run-meta" id="audit-run-meta"></span>
+                <button class="audit-drawer-close" onclick="closeAuditDrawer()" title="Close">
+                    {{icon "x"}}
+                </button>
+            </div>
+            <div id="audit-content" class="audit-drawer-body">
+                <!-- Content loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco Editor from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+
+    <script>
+    let currentAgentType = null;
+    let currentDefaultPrompt = '';
+    let hasOverride = false;
+    let monacoEditor = null;
+    let monacoReady = false;
+
+    // Initialize Monaco Editor
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+
+    function initMonaco(callback) {
+        if (monacoReady && monacoEditor) {
+            callback();
+            return;
+        }
+
+        require(['vs/editor/editor.main'], function () {
+            // Define a dark theme matching our UI
+            monaco.editor.defineTheme('factory-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'comment', foreground: '6b7280' },
+                    { token: 'keyword', foreground: 'c084fc' },
+                    { token: 'string', foreground: '34d399' },
+                ],
+                colors: {
+                    'editor.background': '#0f1117',
+                    'editor.foreground': '#e5e7eb',
+                    'editor.lineHighlightBackground': '#1f2937',
+                    'editorCursor.foreground': '#6366f1',
+                    'editor.selectionBackground': '#374151',
+                    'editorLineNumber.foreground': '#4b5563',
+                    'editorLineNumber.activeForeground': '#9ca3af',
+                }
+            });
+
+            const container = document.getElementById('editorContainer');
+            container.innerHTML = '';
+
+            monacoEditor = monaco.editor.create(container, {
+                value: '',
+                language: 'markdown',
+                theme: 'factory-dark',
+                automaticLayout: true,
+                fontSize: 13,
+                lineHeight: 20,
+                fontFamily: "'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', monospace",
+                minimap: { enabled: true, scale: 1 },
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                wrappingStrategy: 'advanced',
+                padding: { top: 16, bottom: 16 },
+                renderWhitespace: 'selection',
+                bracketPairColorization: { enabled: true },
+                guides: {
+                    bracketPairs: true,
+                    indentation: true,
+                },
+                smoothScrolling: true,
+                cursorBlinking: 'smooth',
+                cursorSmoothCaretAnimation: 'on',
+            });
+
+            monacoReady = true;
+            callback();
+        });
+    }
+
+    async function openPromptEditor(agentType, agentName) {
+        currentAgentType = agentType;
+        document.getElementById('panelAgentName').textContent = agentName;
+
+        // Open panel first (shows loading state)
+        document.querySelector('.slide-panel-overlay').classList.add('active');
+        document.getElementById('promptPanel').classList.add('open');
+
+        // Fetch prompt data
+        try {
+            const response = await fetch(`/api/settings/agents/${agentType}/prompt`);
+            const data = await response.json();
+
+            currentDefaultPrompt = data.default_prompt || '';
+            hasOverride = data.has_override;
+
+            const promptToShow = data.has_override ? data.custom_prompt : data.default_prompt;
+
+            // Initialize Monaco and set content
+            initMonaco(() => {
+                monacoEditor.setValue(promptToShow || '');
+                monacoEditor.setScrollPosition({ scrollTop: 0 });
+                monacoEditor.focus();
+
+                // Update UI state
+                updateUIState(data.has_override);
+            });
+
+        } catch (error) {
+            console.error('Failed to fetch prompt:', error);
+            initMonaco(() => {
+                monacoEditor.setValue('// Error loading prompt');
+            });
+        }
+    }
+
+    function updateUIState(isOverride) {
+        const badge = document.getElementById('statusBadge');
+        const hint = document.getElementById('promptHint');
+        const revertBtn = document.getElementById('revertBtn');
+
+        if (isOverride) {
+            badge.className = 'override-badge';
+            badge.textContent = 'Custom Override';
+            hint.textContent = 'You have a custom override. Click "Revert" to use the built-in prompt.';
+            revertBtn.style.display = 'inline-flex';
+        } else {
+            badge.className = 'default-badge';
+            badge.textContent = 'Default';
+            hint.textContent = 'Showing the default prompt. Edit and save to create a custom override.';
+            revertBtn.style.display = 'none';
+        }
+    }
+
+    function closePromptEditor() {
+        document.querySelector('.slide-panel-overlay').classList.remove('active');
+        document.getElementById('promptPanel').classList.remove('open');
+        currentAgentType = null;
+        currentDefaultPrompt = '';
+        hasOverride = false;
+    }
+
+    async function savePrompt() {
+        if (!currentAgentType || !monacoEditor) return;
+
+        const prompt = monacoEditor.getValue();
+
+        try {
+            const response = await fetch(`/api/settings/agents/${currentAgentType}/prompt`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ system_prompt: prompt })
+            });
+
+            if (response.ok) {
+                showToast('Custom system prompt saved');
+                hasOverride = true;
+                updateUIState(true);
+            } else {
+                const data = await response.json();
+                showToast(data.error || 'Failed to save prompt', true);
+            }
+        } catch (error) {
+            console.error('Failed to save prompt:', error);
+            showToast('Failed to save prompt', true);
+        }
+    }
+
+    async function revertToDefault() {
+        if (!currentAgentType) return;
+
+        try {
+            const response = await fetch(`/api/settings/agents/${currentAgentType}/prompt`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showToast('Reverted to default prompt');
+                if (monacoEditor) {
+                    monacoEditor.setValue(currentDefaultPrompt);
+                    monacoEditor.setScrollPosition({ scrollTop: 0 });
+                }
+                hasOverride = false;
+                updateUIState(false);
+            } else {
+                const data = await response.json();
+                showToast(data.error || 'Failed to revert', true);
+            }
+        } catch (error) {
+            console.error('Failed to revert:', error);
+            showToast('Failed to revert to default', true);
+        }
+    }
+
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast' + (isError ? ' error' : '');
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    // Close panel on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closePromptEditor();
+            closeModelSelector();
+        }
+        // Ctrl/Cmd + S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            const panel = document.getElementById('promptPanel');
+            if (panel.classList.contains('open')) {
+                e.preventDefault();
+                savePrompt();
+            }
+        }
+    });
+
+    // Model selector functions
+    let modelAgentType = null;
+
+    const providerModels = {
+        anthropic: [
+            { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+            { id: 'claude-opus-4-20250514', name: 'Claude Opus 4' },
+            { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+            { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+        ],
+        openai: [
+            { id: 'gpt-4o', name: 'GPT-4o' },
+            { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+            { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+            { id: 'o1', name: 'o1' },
+            { id: 'o1-mini', name: 'o1 Mini' },
+        ],
+        google: [
+            { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+        ]
+    };
+
+    function openModelSelector(agentType, agentName) {
+        modelAgentType = agentType;
+        document.getElementById('modelAgentName').textContent = agentName;
+        document.getElementById('modelModalOverlay').classList.add('active');
+
+        // Try to load current config
+        fetch(`/api/settings/providers/${agentType}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.provider) {
+                    document.getElementById('providerSelect').value = data.provider;
+                }
+                updateModelOptions();
+                if (data.model) {
+                    document.getElementById('modelSelect').value = data.model;
+                }
+            })
+            .catch(() => {
+                updateModelOptions();
+            });
+    }
+
+    function closeModelSelector() {
+        document.getElementById('modelModalOverlay').classList.remove('active');
+        modelAgentType = null;
+    }
+
+    function updateModelOptions() {
+        const provider = document.getElementById('providerSelect').value;
+        const select = document.getElementById('modelSelect');
+        const models = providerModels[provider] || [];
+
+        select.innerHTML = models.map(m =>
+            `<option value="${m.id}">${m.name}</option>`
+        ).join('');
+    }
+
+    async function saveModelConfig() {
+        if (!modelAgentType) return;
+
+        const provider = document.getElementById('providerSelect').value;
+        const model = document.getElementById('modelSelect').value;
+
+        try {
+            const response = await fetch(`/api/settings/providers/${modelAgentType}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, model })
+            });
+
+            if (response.ok) {
+                showToast('Model configuration saved');
+                closeModelSelector();
+                location.reload(); // Reload to show updated badge
+            } else {
+                const data = await response.json();
+                showToast(data.error || 'Failed to save', true);
+            }
+        } catch (error) {
+            console.error('Failed to save model config:', error);
+            showToast('Failed to save configuration', true);
+        }
+    }
+
+    // Audit log drawer functions
+    async function openAuditDrawer(runId, agentName, ticketSlug) {
+        const drawer = document.getElementById('audit-drawer');
+        const auditBody = document.getElementById('audit-content');
+        const meta = document.getElementById('audit-run-meta');
+
+        // Set content first
+        meta.textContent = `${agentName} • ${ticketSlug}`;
+        auditBody.innerHTML = '<div class="audit-loading"><span class="icon icon-loader">{{icon "loader"}}</span> Loading audit entries...</div>';
+
+        // Show drawer (CSS handles the transition)
+        drawer.classList.add('open');
+        document.body.classList.add('drawer-open');
+
+        try {
+            const response = await fetch(`/api/runs/${runId}/audit`);
+            const entries = await response.json() || [];
+
+            if (entries.length === 0) {
+                auditBody.innerHTML = '<div class="audit-empty"><span class="icon">{{icon "file-text"}}</span><p>No audit entries for this run</p></div>';
+                return;
+            }
+
+            // Group entries by runID (should be one for a specific run, but handle multiples)
+            let html = '';
+            entries.forEach(entry => {
+                const eventIcon = getEventIcon(entry.eventType);
+                const eventClass = getEventClass(entry.eventType);
+                let eventContent = '';
+
+                if (entry.eventType === 'response_received') {
+                    try {
+                        const data = JSON.parse(entry.eventData);
+                        eventContent = `
+                            <div class="audit-stats">
+                                <span title="Input tokens">↗ ${data.token_input || 0}</span>
+                                <span title="Output tokens">↘ ${data.token_output || 0}</span>
+                                <span title="Duration">${data.duration_ms || 0}ms</span>
+                            </div>
+                            <pre class="audit-data">${escapeHtml(data.response || '').substring(0, 2000)}${(data.response || '').length > 2000 ? '...[truncated]' : ''}</pre>`;
+                    } catch {
+                        eventContent = `<pre class="audit-data">${escapeHtml(entry.eventData).substring(0, 2000)}</pre>`;
+                    }
+                } else if (entry.eventType === 'tool_call') {
+                    try {
+                        const data = JSON.parse(entry.eventData);
+                        eventContent = `<div class="audit-tool"><strong>Tool:</strong> ${escapeHtml(data.tool)}</div><pre class="audit-data">${escapeHtml(data.args).substring(0, 1000)}</pre>`;
+                    } catch {
+                        eventContent = `<pre class="audit-data">${escapeHtml(entry.eventData)}</pre>`;
+                    }
+                } else {
+                    eventContent = `<pre class="audit-data">${escapeHtml(entry.eventData).substring(0, 2000)}</pre>`;
+                }
+
+                html += `
+                    <div class="audit-entry ${eventClass}">
+                        <div class="audit-entry-header">
+                            ${eventIcon}
+                            <span class="audit-event-type">${formatEventType(entry.eventType)}</span>
+                            <span class="audit-entry-time">${formatAuditTime(entry.createdAt)}</span>
+                        </div>
+                        ${eventContent}
+                    </div>`;
+            });
+
+            auditBody.innerHTML = html;
+        } catch (err) {
+            console.error('Failed to load audit entries:', err);
+            auditBody.innerHTML = '<div class="audit-error"><span class="icon">{{icon "alert-triangle"}}</span><p>Failed to load audit entries</p></div>';
+        }
+    }
+
+    function closeAuditDrawer() {
+        document.getElementById('audit-drawer').classList.remove('open');
+        document.body.classList.remove('drawer-open');
+    }
+
+    function getEventIcon(eventType) {
+        switch(eventType) {
+            case 'prompt_sent': return '<span class="icon audit-icon-prompt">{{icon "send"}}</span>';
+            case 'response_received': return '<span class="icon audit-icon-response">{{icon "message-square"}}</span>';
+            case 'tool_call': return '<span class="icon audit-icon-tool">{{icon "wrench"}}</span>';
+            case 'error': return '<span class="icon audit-icon-error">{{icon "alert-circle"}}</span>';
+            default: return '<span class="icon">{{icon "circle"}}</span>';
+        }
+    }
+
+    function getEventClass(eventType) {
+        switch(eventType) {
+            case 'prompt_sent': return 'entry-prompt';
+            case 'response_received': return 'entry-response';
+            case 'tool_call': return 'entry-tool';
+            case 'error': return 'entry-error';
+            default: return '';
+        }
+    }
+
+    function formatEventType(eventType) {
+        return eventType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    function formatAuditTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Initialize model options on load
+    updateModelOptions();
+    </script>
+</body>
+</html>
+{{end}}

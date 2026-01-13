@@ -1,0 +1,1098 @@
+{{define "ticket.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} | Factory</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/htmx.min.js"></script>
+</head>
+<body hx-ext="sse" sse-connect="/api/events">
+    <!-- Global Status Bar -->
+    {{template "global_status" .}}
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="logo">
+            <span class="logo-icon">{{icon "activity"}}</span>
+            <span class="logo-text">Factory</span>
+        </div>
+        <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">{{icon "layers"}}</button>
+    </header>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <div class="app">
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">{{icon "activity"}}</span>
+                <span class="logo-text">Factory</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="/">
+                    <span class="nav-icon">{{icon "layout"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Execution</span>
+                        <span class="nav-contract">Work items & flow</span>
+                    </span>
+                </a></li>
+                <li><a href="/agents">
+                    <span class="nav-icon">{{icon "bot"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Agents</span>
+                        <span class="nav-contract">Actors & capabilities</span>
+                    </span>
+                </a></li>
+                <li><a href="/settings">
+                    <span class="nav-icon">{{icon "settings"}}</span>
+                    <span class="nav-content">
+                        <span class="nav-label">Policies</span>
+                        <span class="nav-contract">Thresholds & rules</span>
+                    </span>
+                </a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="/new" class="btn btn-primary">{{icon "plus"}} New Ticket</a>
+            </div>
+        </nav>
+        <main class="content">
+            <div class="ticket-detail">
+                <div class="ticket-detail-header">
+                    <a href="/" class="back-link">{{icon "arrow-left"}} Back to Board</a>
+                    <div class="ticket-status-badge status-{{.Ticket.Status | statusColor}}">
+                        {{icon "circle"}} {{.Ticket.Status}}
+                    </div>
+                </div>
+
+                <div class="ticket-main">
+                    <div class="ticket-info">
+                        <h1>{{.Ticket.Title}}</h1>
+
+                        <div class="ticket-meta">
+                            {{if .Ticket.Domain}}
+                            <span class="badge badge-domain domain-{{.Ticket.Domain}}">
+                                {{icon "layers"}} {{.Ticket.Domain | title}}
+                            </span>
+                            {{end}}
+                            {{if .Ticket.Priority}}
+                            <span class="badge badge-priority priority-{{.Ticket.Priority}}">
+                                {{icon "alert-triangle"}} P{{.Ticket.Priority}}
+                            </span>
+                            {{end}}
+                            {{if .Ticket.Type}}
+                            <span class="badge badge-type">
+                                {{icon "tag"}} {{.Ticket.Type | title}}
+                            </span>
+                            {{end}}
+                            {{if .Ticket.Tags}}
+                            {{range .Ticket.Tags}}
+                            <span class="tag tag-{{.Type}}" style="--tag-color: {{.Color}}">
+                                {{if eq .Type "epic"}}{{icon "layers"}}{{end}}{{.Name}}
+                            </span>
+                            {{end}}
+                            {{end}}
+                        </div>
+
+                        {{if .Ticket.Description}}
+                        <div class="section">
+                            <h2>{{icon "file"}} Description</h2>
+                            <div class="markdown-content">{{.Ticket.Description | markdown}}</div>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.AcceptanceCriteria}}
+                        <div class="section">
+                            <h2>Acceptance Criteria</h2>
+                            <ul class="criteria-list">
+                                {{range .Ticket.AcceptanceCriteria}}
+                                <li>{{.}}</li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Requirements}}
+                        <div class="section">
+                            <h2>Requirements Analysis</h2>
+                            {{with .Ticket.Requirements}}
+                                {{if .PMAnalysis}}
+                                <div class="subsection">
+                                    <h3>PM Analysis</h3>
+                                    <p>{{.PMAnalysis}}</p>
+                                </div>
+                                {{end}}
+
+                                {{if .TechnicalNotes}}
+                                <div class="subsection">
+                                    <h3>Technical Notes</h3>
+                                    <p>{{.TechnicalNotes}}</p>
+                                </div>
+                                {{end}}
+
+                                {{if .Questions}}
+                                <div class="subsection questions-section requirements-qa">
+                                    <div class="requirements-qa-header">
+                                        {{icon "help-circle"}}
+                                        <h3>Requirements Q&A</h3>
+                                        <span class="requirements-qa-badge">
+                                            {{icon "clipboard"}} From PM Analysis
+                                        </span>
+                                    </div>
+                                    <p class="requirements-qa-context">
+                                        These questions were generated by the PM agent during initial requirements gathering.
+                                        Answer them to help clarify the ticket scope before development begins.
+                                    </p>
+                                    {{range $i, $q := .Questions}}
+                                    <div class="question-item {{if $q.Answer}}answered{{end}}">
+                                        <div class="question-text">
+                                            <strong>Q{{add $i 1}}:</strong> {{$q.Question}}
+                                        </div>
+                                        {{if $q.Answer}}
+                                        <div class="answer-text">
+                                            <strong>A:</strong> {{$q.Answer}}
+                                        </div>
+                                        {{else}}
+                                        <form class="answer-form"
+                                              hx-post="/api/tickets/{{$.Ticket.ID}}/answer"
+                                              hx-swap="none"
+                                              hx-on::after-request="window.location.reload()">
+                                            <input type="hidden" name="questionIndex" value="{{$i}}">
+                                            <textarea name="answer" placeholder="Your answer..." rows="2" required></textarea>
+                                            <button type="submit" class="btn btn-primary btn-sm">Submit Answer</button>
+                                        </form>
+                                        {{end}}
+                                    </div>
+                                    {{end}}
+                                </div>
+                                {{end}}
+
+                                {{if .FinalDescription}}
+                                <div class="subsection">
+                                    <h3>Final Description</h3>
+                                    <p>{{.FinalDescription}}</p>
+                                </div>
+                                {{end}}
+
+                                {{if .FinalCriteria}}
+                                <div class="subsection">
+                                    <h3>Final Acceptance Criteria</h3>
+                                    <ul>
+                                        {{range .FinalCriteria}}
+                                        <li>{{.}}</li>
+                                        {{end}}
+                                    </ul>
+                                </div>
+                                {{end}}
+                            {{end}}
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Bugs}}
+                        <div class="section">
+                            <h2>Bugs Found</h2>
+                            <ul class="bug-list">
+                                {{range .Ticket.Bugs}}
+                                <li class="bug-item severity-{{.Severity}}">
+                                    <span class="bug-severity">{{.Severity}}</span>
+                                    <span class="bug-desc">{{.Description}}</span>
+                                    {{if .File}}
+                                    <span class="bug-file">{{.File}}:{{.Line}}</span>
+                                    {{end}}
+                                </li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.Files}}
+                        <div class="section">
+                            <h2>Related Files</h2>
+                            <ul class="file-list">
+                                {{range .Ticket.Files}}
+                                <li>{{.}}</li>
+                                {{end}}
+                            </ul>
+                        </div>
+                        {{end}}
+
+                        <!-- Chat Section -->
+                        <div class="section chat-section" id="chat-section">
+                            <div class="chat-header">
+                                <h2>{{icon "message-circle"}} Discussion</h2>
+                                <span class="conversation-status status-open">{{icon "zap"}} Live</span>
+                            </div>
+
+                            <div class="chat-container" id="chat-container"
+                                 hx-get="/api/tickets/{{.Ticket.ID}}/messages"
+                                 hx-trigger="sse:conversation-update-{{.Ticket.ID}}"
+                                 hx-swap="innerHTML">
+                                {{if .AllMessages}}
+                                    {{range .AllMessages}}
+                                    <div class="chat-bubble-row {{if eq .Agent "user"}}user{{else}}agent{{end}}">
+                                        <div class="chat-avatar avatar-{{.Agent | agentAvatarClass}}">
+                                            {{if eq .Agent "PM"}}{{icon "clipboard"}}{{end}}
+                                            {{if eq .Agent "dev-frontend"}}{{icon "monitor"}}{{end}}
+                                            {{if eq .Agent "dev-backend"}}{{icon "server"}}{{end}}
+                                            {{if eq .Agent "dev-infra"}}{{icon "cloud"}}{{end}}
+                                            {{if eq .Agent "qa"}}{{icon "bug"}}{{end}}
+                                            {{if eq .Agent "ux"}}{{icon "palette"}}{{end}}
+                                            {{if eq .Agent "security"}}{{icon "shield"}}{{end}}
+                                            {{if eq .Agent "user"}}{{icon "user"}}{{end}}
+                                        </div>
+                                        <div class="chat-bubble">
+                                            <div class="chat-bubble-name">{{.Agent}}</div>
+                                            <div class="chat-bubble-content">{{.Content}}</div>
+                                            <div class="chat-bubble-time">{{.CreatedAt | timeAgo}}</div>
+                                        </div>
+                                    </div>
+                                    {{end}}
+                                {{else}}
+                                    <div class="chat-empty">
+                                        <div class="chat-empty-icon">{{icon "message-circle"}}</div>
+                                        <p>No messages yet</p>
+                                        <p style="font-size: 0.8rem; margin-top: 0.25rem;">Start a conversation with the PM</p>
+                                    </div>
+                                {{end}}
+                            </div>
+
+                            <div class="chat-input-bar">
+                                <form class="chat-input-form"
+                                      hx-post="/api/tickets/{{.Ticket.ID}}/chat"
+                                      hx-swap="none"
+                                      hx-on::after-request="this.reset(); document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;">
+                                    <div class="chat-input-wrapper">
+                                        <textarea class="chat-input"
+                                                  name="content"
+                                                  placeholder="Ask the PM a question or leave a comment..."
+                                                  rows="1"
+                                                  required
+                                                  onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
+                                    </div>
+                                    <button type="submit" class="chat-send-btn" title="Send message">
+                                        {{icon "send"}}
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Typing indicator (shown via SSE) -->
+                            <div class="chat-typing" id="typing-indicator" style="display: none;">
+                                <div class="chat-avatar avatar-pm">{{icon "clipboard"}}</div>
+                                <div class="typing-indicator">
+                                    <span class="typing-dot"></span>
+                                    <span class="typing-dot"></span>
+                                    <span class="typing-dot"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{if .PMCheckins}}
+                        <div class="section pm-checkins-section">
+                            <h2>{{icon "clipboard"}} PM Check-ins</h2>
+                            <div class="checkin-list">
+                                {{range .PMCheckins}}
+                                <div class="checkin-card {{if .Resolved}}resolved{{end}}">
+                                    <div class="checkin-header">
+                                        <span class="checkin-type type-{{.CheckinType}}">
+                                            {{icon "clock"}} {{.CheckinType}}
+                                        </span>
+                                        <span class="checkin-time">{{.CreatedAt | timeAgo}}</span>
+                                        {{if .Resolved}}
+                                        <span class="checkin-resolved-badge">{{icon "check-circle"}} Resolved</span>
+                                        {{end}}
+                                    </div>
+                                    <p class="checkin-summary">{{.Summary}}</p>
+                                    {{if .ActionRequired}}
+                                    <div class="checkin-action">
+                                        {{icon "alert-triangle"}} <strong>Action Required:</strong> {{.ActionRequired}}
+                                    </div>
+                                    {{end}}
+                                    {{if not .Resolved}}
+                                    <button class="btn btn-sm btn-outline"
+                                            hx-post="/api/checkins/{{.ID}}/resolve"
+                                            hx-swap="none"
+                                            hx-on::after-request="window.location.reload()">
+                                        {{icon "check"}} Mark Resolved
+                                    </button>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                            </div>
+                        </div>
+                        {{end}}
+
+                        {{if .Conversations}}
+                        <div class="section discussions-section">
+                            <h2>{{icon "message-circle"}} Discussions &amp; Reviews</h2>
+                            <div class="discussions-list">
+                                {{range .Conversations}}
+                                {{if isSignoffThread .ThreadType}}
+                                {{/* Sign-off Report Card */}}
+                                <div class="signoff-report-card signoff-{{.ThreadType}}">
+                                    <div class="signoff-report-header">
+                                        <span class="signoff-report-icon">
+                                            {{icon (signoffIcon .ThreadType)}}
+                                        </span>
+                                        <span class="signoff-report-title">{{.ThreadType | threadTypeName}}</span>
+                                        {{if .Messages}}{{with index .Messages 0}}{{with parseSignoffReport .Content}}
+                                        <span class="signoff-status-badge status-{{.Status}}">
+                                            {{if eq .Status "passed"}}{{icon "check-circle"}}{{else}}{{icon "alert-triangle"}}{{end}}
+                                            {{.Status | upper}}
+                                        </span>
+                                        {{end}}{{end}}{{end}}
+                                        <span class="signoff-report-time">{{.CreatedAt | timeAgo}}</span>
+                                    </div>
+                                    {{if .Messages}}{{with index .Messages 0}}{{with parseSignoffReport .Content}}
+                                    <div class="signoff-report-body">
+                                        {{if .Summary}}
+                                        <p class="signoff-summary">{{.Summary}}</p>
+                                        {{end}}
+
+                                        {{if .ChecksPerformed}}
+                                        <div class="signoff-checks">
+                                            <h4>{{icon "check-square"}} Checks Performed</h4>
+                                            <ul class="checks-list">
+                                                {{range .ChecksPerformed}}
+                                                <li>{{icon "check"}} {{.}}</li>
+                                                {{end}}
+                                            </ul>
+                                        </div>
+                                        {{end}}
+
+                                        {{if .CriteriaVerified}}
+                                        <div class="signoff-criteria">
+                                            <h4>{{icon "list-checks"}} Criteria Verified</h4>
+                                            <ul class="criteria-verified-list">
+                                                {{range .CriteriaVerified}}
+                                                <li>{{icon "check-circle"}} {{.}}</li>
+                                                {{end}}
+                                            </ul>
+                                        </div>
+                                        {{end}}
+
+                                        {{if .TestsRun}}
+                                        <div class="signoff-tests">
+                                            <h4>{{icon "flask"}} Test Results</h4>
+                                            <div class="test-summary">
+                                                <span class="test-passed">{{icon "check"}} {{.TestsRun.Passed}} passed</span>
+                                                {{if gt .TestsRun.Failed 0}}
+                                                <span class="test-failed">{{icon "x"}} {{.TestsRun.Failed}} failed</span>
+                                                {{end}}
+                                                {{if gt .TestsRun.Skipped 0}}
+                                                <span class="test-skipped">{{icon "minus"}} {{.TestsRun.Skipped}} skipped</span>
+                                                {{end}}
+                                            </div>
+                                        </div>
+                                        {{end}}
+
+                                        {{if .Findings}}
+                                        <div class="signoff-findings">
+                                            <h4>{{icon "search"}} Findings</h4>
+                                            {{range .Findings}}
+                                            <div class="finding-item severity-{{.Severity}}">
+                                                <span class="finding-severity">{{.Severity}}</span>
+                                                <p class="finding-desc">{{.Description}}</p>
+                                                {{if .Recommendation}}
+                                                <p class="finding-recommendation">{{icon "lightbulb"}} {{.Recommendation}}</p>
+                                                {{end}}
+                                            </div>
+                                            {{end}}
+                                        </div>
+                                        {{end}}
+
+                                        {{if .UnmetCriteria}}
+                                        <div class="signoff-unmet">
+                                            <h4>{{icon "alert-circle"}} Unmet Criteria</h4>
+                                            <ul class="unmet-list">
+                                                {{range .UnmetCriteria}}
+                                                <li>{{icon "x"}} {{.}}</li>
+                                                {{end}}
+                                            </ul>
+                                        </div>
+                                        {{end}}
+
+                                        {{if .Bugs}}
+                                        <div class="signoff-bugs">
+                                            <h4>{{icon "bug"}} Bugs Found</h4>
+                                            {{range .Bugs}}
+                                            <div class="bug-item severity-{{.Severity}}">
+                                                <span class="bug-severity-badge">{{.Severity}}</span>
+                                                <p class="bug-description">{{.Description}}</p>
+                                                {{if .File}}
+                                                <code class="bug-location">{{.File}}{{if .Line}}:{{.Line}}{{end}}</code>
+                                                {{end}}
+                                            </div>
+                                            {{end}}
+                                        </div>
+                                        {{end}}
+
+                                        {{if .Notes}}
+                                        <div class="signoff-notes">
+                                            <h4>{{icon "file-text"}} Notes</h4>
+                                            <p>{{.Notes}}</p>
+                                        </div>
+                                        {{end}}
+
+                                        {{if .Reason}}
+                                        <div class="signoff-reason">
+                                            <h4>{{icon "info"}} Reason</h4>
+                                            <p>{{.Reason}}</p>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                    {{end}}{{end}}{{end}}
+
+                                    {{/* Attachments for sign-off messages */}}
+                                    {{if .Messages}}{{with index .Messages 0}}
+                                    {{if .Attachments}}
+                                    <div class="signoff-attachments">
+                                        <h4>{{icon "paperclip"}} Attachments</h4>
+                                        <div class="attachments-list">
+                                            {{range .Attachments}}
+                                            <a href="/api/attachments/{{.ID}}" class="attachment-link" target="_blank">
+                                                {{icon (attachmentIcon .ContentType)}}
+                                                <span class="attachment-name">{{.Filename}}</span>
+                                                <span class="attachment-size">({{.Size | formatBytes}})</span>
+                                            </a>
+                                            {{end}}
+                                        </div>
+                                    </div>
+                                    {{end}}
+                                    {{end}}{{end}}
+
+                                    {{/* Agent Conversation History (expandable) */}}
+                                    <details class="signoff-agent-history">
+                                        <summary class="agent-history-toggle">
+                                            {{icon "terminal"}}
+                                            <span>View Agent Conversation</span>
+                                            <span class="expand-hint">{{icon "chevron-down"}}</span>
+                                        </summary>
+                                        <div class="agent-history-content" data-ticket-id="{{$.Ticket.ID}}" data-agent="{{signoffAgent .ThreadType}}">
+                                            <div class="agent-history-loading">
+                                                <span class="icon icon-loader">{{icon "loader"}}</span>
+                                                Loading agent conversation...
+                                            </div>
+                                        </div>
+                                    </details>
+                                </div>
+                                {{else}}
+                                {{/* Regular Discussion Card */}}
+                                <details class="discussion-card">
+                                    <summary class="discussion-header">
+                                        <span class="discussion-expand-icon">{{icon "chevron-right"}}</span>
+                                        <span class="thread-type thread-type-{{.ThreadType}}">
+                                            {{if eq .ThreadType "dev_discussion"}}{{icon "monitor"}}{{end}}
+                                            {{if eq .ThreadType "qa_feedback"}}{{icon "bug"}}{{end}}
+                                            {{if eq .ThreadType "pm_checkin"}}{{icon "clipboard"}}{{end}}
+                                            {{if eq .ThreadType "blocker"}}{{icon "alert-triangle"}}{{end}}
+                                            {{if eq .ThreadType "user_question"}}{{icon "help-circle"}}{{end}}
+                                            {{.ThreadType | threadTypeName}}
+                                            {{if eq .ThreadType "user_question"}}
+                                            <span class="thread-source-badge">{{icon "clipboard"}} Req. Gathering</span>
+                                            {{end}}
+                                        </span>
+                                        <span class="discussion-title">{{if .Title}}{{.Title}}{{else}}Discussion{{end}}</span>
+                                        <span class="discussion-status status-{{.Status}}">{{.Status}}</span>
+                                        <span class="discussion-time">{{.CreatedAt | timeAgo}}</span>
+                                    </summary>
+                                    <div class="discussion-messages">
+                                        {{if .Messages}}
+                                            {{range .Messages}}
+                                            <div class="discussion-message">
+                                                <div class="discussion-message-header">
+                                                    <span class="message-agent">
+                                                        {{if eq .Agent "PM"}}{{icon "clipboard"}}{{end}}
+                                                        {{if eq .Agent "dev-frontend"}}{{icon "monitor"}}{{end}}
+                                                        {{if eq .Agent "dev-backend"}}{{icon "server"}}{{end}}
+                                                        {{if eq .Agent "dev-infra"}}{{icon "cloud"}}{{end}}
+                                                        {{if eq .Agent "qa"}}{{icon "bug"}}{{end}}
+                                                        {{if eq .Agent "ux"}}{{icon "palette"}}{{end}}
+                                                        {{if eq .Agent "security"}}{{icon "shield"}}{{end}}
+                                                        {{if eq .Agent "user"}}{{icon "user"}}{{end}}
+                                                        {{.Agent}}
+                                                    </span>
+                                                    <span class="message-time">{{.CreatedAt | timeAgo}}</span>
+                                                </div>
+                                                <div class="discussion-message-content">{{.Content}}</div>
+                                                {{if .Attachments}}
+                                                <div class="message-attachments">
+                                                    {{range .Attachments}}
+                                                    <a href="/api/attachments/{{.ID}}" class="attachment-link" target="_blank">
+                                                        {{icon (attachmentIcon .ContentType)}}
+                                                        <span class="attachment-name">{{.Filename}}</span>
+                                                        <span class="attachment-size">({{.Size | formatBytes}})</span>
+                                                    </a>
+                                                    {{end}}
+                                                </div>
+                                                {{end}}
+                                            </div>
+                                            {{end}}
+                                        {{else}}
+                                            <p class="no-messages">No messages in this discussion</p>
+                                        {{end}}
+                                    </div>
+                                </details>
+                                {{end}}
+                                {{end}}
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <div class="ticket-sidebar">
+                        {{if eq .Ticket.Status "AWAITING_USER"}}
+                        <div class="action-panel">
+                            <h3>{{icon "check-circle"}} Ready to Proceed?</h3>
+                            <p>Review the requirements and approve when ready.</p>
+                            <button class="btn btn-success btn-lg"
+                                    hx-post="/api/tickets/{{.Ticket.ID}}/ready"
+                                    hx-swap="none"
+                                    hx-on::after-request="window.location.reload()">
+                                {{icon "check"}} Approve &amp; Move to Ready
+                            </button>
+                        </div>
+                        {{end}}
+
+                        {{if and .Ticket.AssignedAgent (ne .Ticket.Status "DONE")}}
+                        <div class="agent-panel">
+                            <h3>{{icon "bot"}} Assigned Agent</h3>
+                            <div class="assigned-agent">
+                                {{if eq .Ticket.AssignedAgent "PM"}}{{icon "clipboard"}}{{end}}
+                                {{if eq .Ticket.AssignedAgent "dev-frontend"}}{{icon "monitor"}}{{end}}
+                                {{if eq .Ticket.AssignedAgent "dev-backend"}}{{icon "server"}}{{end}}
+                                {{if eq .Ticket.AssignedAgent "dev-infra"}}{{icon "cloud"}}{{end}}
+                                {{if eq .Ticket.AssignedAgent "qa"}}{{icon "bug"}}{{end}}
+                                {{if eq .Ticket.AssignedAgent "ux"}}{{icon "palette"}}{{end}}
+                                {{if eq .Ticket.AssignedAgent "security"}}{{icon "shield"}}{{end}}
+                                <span>{{.Ticket.AssignedAgent}}</span>
+                            </div>
+                        </div>
+                        {{end}}
+
+                        <div class="signoffs-panel">
+                            <h3>{{icon "check-circle"}} Sign-offs</h3>
+                            <ul class="signoff-list">
+                                <li class="{{if .Ticket.Signoffs.Dev}}signed{{end}} signoff-clickable" onclick="scrollToSignoff('dev_signoff')" title="{{if .Ticket.Signoffs.Dev}}Click to view dev sign-off report{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.Dev}}{{icon "check-circle"}}{{else}}{{icon "circle"}}{{end}}</span>
+                                    Dev
+                                    {{if .Ticket.Signoffs.Dev}}<span class="signoff-view">{{icon "external-link"}}</span>{{end}}
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.QA}}signed{{end}} signoff-clickable" onclick="scrollToSignoff('qa_signoff')" title="{{if .Ticket.Signoffs.QA}}Click to view QA sign-off report{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.QA}}{{icon "check-circle"}}{{else}}{{icon "circle"}}{{end}}</span>
+                                    QA
+                                    {{if .Ticket.Signoffs.QA}}<span class="signoff-view">{{icon "external-link"}}</span>{{end}}
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.UX}}signed{{end}} signoff-clickable" onclick="scrollToSignoff('ux_signoff')" title="{{if .Ticket.Signoffs.UX}}Click to view UX sign-off report{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.UX}}{{icon "check-circle"}}{{else}}{{icon "circle"}}{{end}}</span>
+                                    UX
+                                    {{if .Ticket.Signoffs.UX}}<span class="signoff-view">{{icon "external-link"}}</span>{{end}}
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.Security}}signed{{end}} signoff-clickable" onclick="scrollToSignoff('security_signoff')" title="{{if .Ticket.Signoffs.Security}}Click to view security sign-off report{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.Security}}{{icon "check-circle"}}{{else}}{{icon "circle"}}{{end}}</span>
+                                    Security
+                                    {{if .Ticket.Signoffs.Security}}<span class="signoff-view">{{icon "external-link"}}</span>{{end}}
+                                </li>
+                                <li class="{{if .Ticket.Signoffs.PM}}signed{{end}} signoff-clickable" onclick="scrollToSignoff('pm_signoff')" title="{{if .Ticket.Signoffs.PM}}Click to view PM sign-off report{{end}}">
+                                    <span class="signoff-icon">{{if .Ticket.Signoffs.PM}}{{icon "check-circle"}}{{else}}{{icon "circle"}}{{end}}</span>
+                                    PM
+                                    {{if .Ticket.Signoffs.PM}}<span class="signoff-view">{{icon "external-link"}}</span>{{end}}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="tags-panel">
+                            <h3>{{icon "tag"}} Tags</h3>
+                            <div class="ticket-tags-list" id="ticket-tags">
+                                {{if .Ticket.Tags}}
+                                {{range .Ticket.Tags}}
+                                <span class="tag tag-{{.Type}}" style="--tag-color: {{.Color}}" data-tag-id="{{.ID}}">
+                                    {{if eq .Type "epic"}}{{icon "layers"}}{{end}}{{.Name}}
+                                    <button class="tag-remove" onclick="removeTag('{{$.Ticket.ID}}', '{{.ID}}')" title="Remove tag">{{icon "x"}}</button>
+                                </span>
+                                {{end}}
+                                {{else}}
+                                <span class="no-tags">No tags</span>
+                                {{end}}
+                            </div>
+                            <div class="tag-add-section">
+                                <select id="tag-select" class="tag-select">
+                                    <option value="">Add a tag...</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline" onclick="addSelectedTag('{{.Ticket.ID}}')" title="Add tag">
+                                    {{icon "plus"}}
+                                </button>
+                            </div>
+                        </div>
+
+                        {{if .TimeStats}}
+                        <div class="timing-stats-panel">
+                            <h3>{{icon "clock"}} Timing Stats</h3>
+                            <div class="timing-stats">
+                                {{if not (durationZero .TimeStats.TotalWorkTime)}}
+                                <div class="stat-row" title="Total time AI agents spent actively working on this ticket">
+                                    <span class="stat-label">{{icon "activity"}} Agent Work Time</span>
+                                    <span class="stat-value work-time">{{formatDuration .TimeStats.TotalWorkTime}}</span>
+                                </div>
+                                {{end}}
+
+                                {{if not (durationZero .TimeStats.TotalIdleTime)}}
+                                <div class="stat-row" title="Time spent waiting between agent runs (e.g., awaiting user input or in queue)">
+                                    <span class="stat-label">{{icon "pause-circle"}} Idle Time</span>
+                                    <span class="stat-value idle-time">{{formatDuration .TimeStats.TotalIdleTime}}</span>
+                                </div>
+                                {{end}}
+
+                                {{if not (durationZero .TimeStats.TotalCycleTime)}}
+                                <div class="stat-row" title="Total elapsed time from ticket creation to completion (work + idle)">
+                                    <span class="stat-label">{{icon "rotate-cw"}} Cycle Time</span>
+                                    <span class="stat-value">{{formatDuration .TimeStats.TotalCycleTime}}</span>
+                                </div>
+                                {{end}}
+
+                                {{if not (durationZero .TimeStats.CurrentIdleTime)}}
+                                <div class="stat-row idle-warning" title="How long since the last agent activity on this ticket">
+                                    <span class="stat-label">{{icon "alert-circle"}} Currently Idle</span>
+                                    <span class="stat-value idle-current">{{formatDuration .TimeStats.CurrentIdleTime}}</span>
+                                </div>
+                                {{end}}
+
+                                {{if gt .TimeStats.AgentRunCount 0}}
+                                <div class="stat-row" title="Number of times an AI agent was invoked for this ticket">
+                                    <span class="stat-label">{{icon "bot"}} Agent Runs</span>
+                                    <span class="stat-value">{{.TimeStats.AgentRunCount}}</span>
+                                </div>
+                                {{end}}
+                            </div>
+
+                            {{if .TimeStats.AgentWorkTimes}}
+                            <div class="agent-work-breakdown">
+                                <h4>Work by Agent</h4>
+                                {{range $agent, $duration := .TimeStats.AgentWorkTimes}}
+                                <div class="agent-stat-row">
+                                    <span class="agent-type">{{$agent}}</span>
+                                    <span class="agent-duration">{{formatDuration $duration}}</span>
+                                </div>
+                                {{end}}
+                            </div>
+                            {{end}}
+                        </div>
+                        {{end}}
+
+                        {{if .Ticket.History}}
+                        <details class="history-panel" {{if le (len .Ticket.History) 5}}open{{end}}>
+                            <summary class="history-header">
+                                <h3>{{icon "clock"}} History</h3>
+                                <span class="history-count">{{len .Ticket.History}} events</span>
+                                <span class="expand-icon">{{icon "chevron-down"}}</span>
+                            </summary>
+                            <ul class="history-list">
+                                {{range .Ticket.History}}
+                                <li>
+                                    <span class="history-status status-{{.Status | statusColor}}">{{.Status}}</span>
+                                    <span class="history-by">by {{.By}}</span>
+                                    <span class="history-time">{{.At | timeAgo}}</span>
+                                    {{if .Note}}
+                                    <p class="history-note">{{.Note}}</p>
+                                    {{end}}
+                                </li>
+                                {{end}}
+                            </ul>
+                        </details>
+                        {{end}}
+
+                        <div class="audit-log-panel">
+                            <h3>{{icon "file-text"}} Audit Log</h3>
+                            <p class="audit-log-desc">View agent prompts, responses, and tool calls</p>
+                            <button class="btn btn-sm btn-outline" onclick="openAuditDrawer('{{.Ticket.ID}}')">
+                                {{icon "external-link"}} View Audit Log
+                            </button>
+                        </div>
+
+                        {{if .Ticket.Worktree}}
+                        <div class="worktree-panel">
+                            <h3>{{icon "git-branch"}} Worktree</h3>
+                            <div class="worktree-info">
+                                <div class="worktree-field">
+                                    <span class="worktree-label">{{icon "git-branch"}} Branch</span>
+                                    <code class="branch-name">{{.Ticket.Worktree.Branch}}</code>
+                                </div>
+                                <div class="worktree-field">
+                                    <span class="worktree-label">{{icon "folder"}} Path</span>
+                                    <code class="path-name" title="{{.Ticket.Worktree.Path}}">{{.Ticket.Worktree.Path | ticketSlug}}</code>
+                                </div>
+                                <div class="worktree-field">
+                                    <span class="worktree-label">Status</span>
+                                    <span class="worktree-status {{if .Ticket.Worktree.Active}}active{{else}}inactive{{end}}">
+                                        {{if .Ticket.Worktree.Active}}{{icon "check-circle"}} Active{{else}}{{icon "circle"}} Inactive{{end}}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="worktree-actions">
+                                {{if not (empty $.GitRepoURL)}}
+                                <button type="button" class="btn btn-sm btn-outline worktree-btn"
+                                        onclick="copyToClipboard('{{cloneCommand $.GitRepoURL .Ticket.Worktree.Branch}}')"
+                                        title="Copy clone command">
+                                    {{icon "copy"}} Clone
+                                </button>
+                                <a href="{{providerBranchURL $.GitProvider $.GitRepoURL .Ticket.Worktree.Branch}}"
+                                   target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline worktree-btn">
+                                    {{icon "external-link"}} Open in {{$.GitProvider | title}}
+                                </a>
+                                {{else}}
+                                <p class="worktree-hint">
+                                    {{icon "info"}} Configure git provider in <a href="/settings">Settings</a> to enable clone/open buttons
+                                </p>
+                                {{end}}
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script>
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('open');
+        document.querySelector('.sidebar-overlay').classList.toggle('active');
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Show feedback
+            const btn = event.currentTarget;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = btn.innerHTML.replace('Clone', 'Copied!');
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            alert('Failed to copy to clipboard');
+        });
+    }
+
+    // Rotate chevron on discussion expand/collapse
+    document.querySelectorAll('.discussion-card').forEach(card => {
+        card.addEventListener('toggle', () => {
+            const icon = card.querySelector('.discussion-expand-icon');
+            if (card.open) {
+                icon.style.transform = 'rotate(90deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
+        });
+    });
+
+    // Scroll to sign-off report when clicking sign-off in sidebar
+    function scrollToSignoff(signoffType) {
+        const card = document.querySelector('.signoff-' + signoffType);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.classList.add('highlight');
+            setTimeout(() => card.classList.remove('highlight'), 2000);
+        }
+    }
+
+    // Tag management
+    let allTags = [];
+
+    async function loadAvailableTags() {
+        try {
+            const response = await fetch('/api/tags');
+            allTags = await response.json() || [];
+            updateTagSelect();
+        } catch (err) {
+            console.error('Failed to load tags:', err);
+        }
+    }
+
+    function updateTagSelect() {
+        const select = document.getElementById('tag-select');
+        if (!select) return;
+
+        // Get currently applied tag IDs
+        const currentTags = Array.from(document.querySelectorAll('#ticket-tags .tag'))
+            .map(t => t.dataset.tagId);
+
+        // Filter out already applied tags
+        const availableTags = allTags.filter(t => !currentTags.includes(t.id));
+
+        select.innerHTML = '<option value="">Add a tag...</option>';
+        availableTags.forEach(tag => {
+            const opt = document.createElement('option');
+            opt.value = tag.id;
+            opt.textContent = `${tag.type === 'epic' ? '⬡ ' : ''}${tag.name}`;
+            opt.style.color = tag.color;
+            select.appendChild(opt);
+        });
+    }
+
+    async function addSelectedTag(ticketId) {
+        const select = document.getElementById('tag-select');
+        const tagId = select.value;
+        if (!tagId) return;
+
+        try {
+            await fetch(`/api/tickets/${ticketId}/tags/${tagId}`, { method: 'POST' });
+            location.reload();
+        } catch (err) {
+            console.error('Failed to add tag:', err);
+        }
+    }
+
+    async function removeTag(ticketId, tagId) {
+        event.stopPropagation();
+        try {
+            await fetch(`/api/tickets/${ticketId}/tags/${tagId}`, { method: 'DELETE' });
+            location.reload();
+        } catch (err) {
+            console.error('Failed to remove tag:', err);
+        }
+    }
+
+    // Load tags on page load
+    document.addEventListener('DOMContentLoaded', loadAvailableTags);
+
+    // Audit log drawer
+    async function openAuditDrawer(ticketId) {
+        const drawer = document.getElementById('audit-drawer');
+        const content = document.getElementById('audit-content');
+
+        // Show drawer and loading state
+        drawer.classList.add('open');
+        document.body.classList.add('drawer-open');
+        content.innerHTML = '<div class="audit-loading"><span class="icon icon-loader">{{icon "loader"}}</span> Loading audit entries...</div>';
+
+        try {
+            const response = await fetch(`/api/audit?ticket_id=${ticketId}`);
+            const entries = await response.json() || [];
+
+            if (entries.length === 0) {
+                content.innerHTML = '<div class="audit-empty"><span class="icon">{{icon "file-text"}}</span><p>No audit entries yet</p><p class="text-muted">Audit entries are created when agents process this ticket</p></div>';
+                return;
+            }
+
+            // Group entries by runID
+            const runs = {};
+            entries.forEach(entry => {
+                const key = entry.runId || 'unknown';
+                if (!runs[key]) {
+                    runs[key] = [];
+                }
+                runs[key].push(entry);
+            });
+
+            let html = '';
+            for (const [runId, runEntries] of Object.entries(runs)) {
+                const firstEntry = runEntries[0];
+                html += `<details class="audit-run-group">
+                    <summary class="audit-run-header">
+                        <span class="audit-agent-badge agent-${firstEntry.agent}">${firstEntry.agent}</span>
+                        <span class="audit-run-id">${runId}</span>
+                        <span class="audit-entry-count">${runEntries.length} events</span>
+                        <span class="audit-run-time">${formatAuditTime(firstEntry.createdAt)}</span>
+                    </summary>
+                    <div class="audit-entries">`;
+
+                runEntries.forEach(entry => {
+                    const eventIcon = getEventIcon(entry.eventType);
+                    const eventClass = getEventClass(entry.eventType);
+                    let eventContent = '';
+
+                    if (entry.eventType === 'response_received') {
+                        try {
+                            const data = JSON.parse(entry.eventData);
+                            eventContent = `
+                                <div class="audit-stats">
+                                    <span title="Input tokens">↗ ${data.token_input || 0}</span>
+                                    <span title="Output tokens">↘ ${data.token_output || 0}</span>
+                                    <span title="Duration">${data.duration_ms || 0}ms</span>
+                                </div>
+                                <pre class="audit-data">${escapeHtml(data.response || '').substring(0, 2000)}${(data.response || '').length > 2000 ? '...[truncated]' : ''}</pre>`;
+                        } catch {
+                            eventContent = `<pre class="audit-data">${escapeHtml(entry.eventData).substring(0, 2000)}</pre>`;
+                        }
+                    } else if (entry.eventType === 'tool_call') {
+                        try {
+                            const data = JSON.parse(entry.eventData);
+                            eventContent = `<div class="audit-tool"><strong>Tool:</strong> ${escapeHtml(data.tool)}</div><pre class="audit-data">${escapeHtml(data.args).substring(0, 1000)}</pre>`;
+                        } catch {
+                            eventContent = `<pre class="audit-data">${escapeHtml(entry.eventData)}</pre>`;
+                        }
+                    } else {
+                        eventContent = `<pre class="audit-data">${escapeHtml(entry.eventData).substring(0, 2000)}</pre>`;
+                    }
+
+                    html += `
+                        <div class="audit-entry ${eventClass}">
+                            <div class="audit-entry-header">
+                                ${eventIcon}
+                                <span class="audit-event-type">${formatEventType(entry.eventType)}</span>
+                                <span class="audit-entry-time">${formatAuditTime(entry.createdAt)}</span>
+                            </div>
+                            ${eventContent}
+                        </div>`;
+                });
+
+                html += '</div></details>';
+            }
+
+            content.innerHTML = html;
+        } catch (err) {
+            console.error('Failed to load audit entries:', err);
+            content.innerHTML = '<div class="audit-error"><span class="icon">{{icon "alert-triangle"}}</span><p>Failed to load audit entries</p></div>';
+        }
+    }
+
+    function closeAuditDrawer() {
+        document.getElementById('audit-drawer').classList.remove('open');
+        document.body.classList.remove('drawer-open');
+    }
+
+    function getEventIcon(eventType) {
+        switch(eventType) {
+            case 'prompt_sent': return '<span class="icon audit-icon-prompt">{{icon "send"}}</span>';
+            case 'response_received': return '<span class="icon audit-icon-response">{{icon "message-square"}}</span>';
+            case 'tool_call': return '<span class="icon audit-icon-tool">{{icon "wrench"}}</span>';
+            case 'error': return '<span class="icon audit-icon-error">{{icon "alert-circle"}}</span>';
+            default: return '<span class="icon">{{icon "circle"}}</span>';
+        }
+    }
+
+    function getEventClass(eventType) {
+        switch(eventType) {
+            case 'prompt_sent': return 'entry-prompt';
+            case 'response_received': return 'entry-response';
+            case 'tool_call': return 'entry-tool';
+            case 'error': return 'entry-error';
+            default: return '';
+        }
+    }
+
+    function formatEventType(eventType) {
+        return eventType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    function formatAuditTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleString();
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Load agent conversation history when sign-off details are expanded
+    document.querySelectorAll('.signoff-agent-history').forEach(details => {
+        details.addEventListener('toggle', async () => {
+            if (!details.open) return;
+
+            const content = details.querySelector('.agent-history-content');
+            if (content.dataset.loaded === 'true') return; // Already loaded
+
+            const ticketId = content.dataset.ticketId;
+            const agentPrefix = content.dataset.agent;
+
+            try {
+                const response = await fetch(`/api/audit?ticket_id=${ticketId}`);
+                const entries = await response.json() || [];
+
+                // Filter entries for this agent type
+                const agentEntries = entries.filter(e =>
+                    e.agent && (e.agent === agentPrefix || e.agent.startsWith(agentPrefix + '-'))
+                );
+
+                if (agentEntries.length === 0) {
+                    content.innerHTML = '<div class="agent-history-empty">No conversation history found for this agent</div>';
+                    content.dataset.loaded = 'true';
+                    return;
+                }
+
+                // Group by runID and show
+                const runs = {};
+                agentEntries.forEach(entry => {
+                    const key = entry.runId || 'unknown';
+                    if (!runs[key]) runs[key] = [];
+                    runs[key].push(entry);
+                });
+
+                let html = '';
+                for (const [runId, runEntries] of Object.entries(runs)) {
+                    // Find prompt and response
+                    const prompt = runEntries.find(e => e.eventType === 'prompt_sent');
+                    const response = runEntries.find(e => e.eventType === 'response_received');
+
+                    html += `<div class="agent-run-block">
+                        <div class="agent-run-meta">
+                            <span class="agent-run-id">${escapeHtml(runId)}</span>
+                            <span class="agent-run-time">${formatAuditTime(runEntries[0].createdAt)}</span>
+                        </div>`;
+
+                    if (prompt) {
+                        html += `<div class="agent-message agent-prompt">
+                            <div class="agent-message-header">
+                                <span class="icon">{{icon "send"}}</span>
+                                Prompt Sent
+                            </div>
+                            <pre class="agent-message-content">${escapeHtml(prompt.eventData).substring(0, 3000)}${prompt.eventData.length > 3000 ? '\n...[truncated]' : ''}</pre>
+                        </div>`;
+                    }
+
+                    if (response) {
+                        let responseText = response.eventData;
+                        let stats = null;
+                        try {
+                            const data = JSON.parse(response.eventData);
+                            responseText = data.response || response.eventData;
+                            stats = {
+                                tokenIn: data.token_input || 0,
+                                tokenOut: data.token_output || 0,
+                                durationMs: data.duration_ms || 0
+                            };
+                        } catch {}
+
+                        html += `<div class="agent-message agent-response">
+                            <div class="agent-message-header">
+                                <span class="icon">{{icon "message-square"}}</span>
+                                Response Received
+                                ${stats ? `<span class="agent-stats">↗${stats.tokenIn} ↘${stats.tokenOut} ${stats.durationMs}ms</span>` : ''}
+                            </div>
+                            <pre class="agent-message-content">${escapeHtml(responseText).substring(0, 5000)}${responseText.length > 5000 ? '\n...[truncated]' : ''}</pre>
+                        </div>`;
+                    }
+
+                    html += '</div>';
+                }
+
+                content.innerHTML = html;
+                content.dataset.loaded = 'true';
+            } catch (err) {
+                console.error('Failed to load agent history:', err);
+                content.innerHTML = '<div class="agent-history-error">Failed to load conversation history</div>';
+            }
+        });
+    });
+    </script>
+
+    <!-- Audit Log Drawer -->
+    <div id="audit-drawer" class="audit-drawer">
+        <div class="audit-drawer-backdrop" onclick="closeAuditDrawer()"></div>
+        <div class="audit-drawer-content">
+            <div class="audit-drawer-header">
+                <h2>{{icon "file-text"}} Audit Log</h2>
+                <button class="audit-drawer-close" onclick="closeAuditDrawer()" title="Close">
+                    {{icon "x"}}
+                </button>
+            </div>
+            <div id="audit-content" class="audit-drawer-body">
+                <!-- Content loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+{{end}}
