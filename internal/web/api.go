@@ -12,6 +12,7 @@ import (
 	"factory/agents/anthropic"
 	"factory/agents/provider"
 	"factory/kanban"
+
 	"github.com/google/uuid"
 )
 
@@ -100,7 +101,7 @@ func (s *Server) apiCreateTicket(w http.ResponseWriter, r *http.Request) {
 		req.Type = r.FormValue("type")
 		// Parse priority
 		if p := r.FormValue("priority"); p != "" {
-			fmt.Sscanf(p, "%d", &req.Priority)
+			_, _ = fmt.Sscanf(p, "%d", &req.Priority)
 		}
 		// Parse acceptance criteria array
 		req.AcceptanceCriteria = r.Form["criteria[]"]
@@ -151,20 +152,22 @@ func (s *Server) apiCreateTicket(w http.ResponseWriter, r *http.Request) {
 
 // UpdateTicketRequest is the request body for updating a ticket.
 type UpdateTicketRequest struct {
-	Title              *string           `json:"title,omitempty"`
-	Description        *string           `json:"description,omitempty"`
-	Domain             *string           `json:"domain,omitempty"`
-	Priority           *int              `json:"priority,omitempty"`
-	Type               *string           `json:"type,omitempty"`
-	Status             *kanban.Status    `json:"status,omitempty"`
-	AssignedAgent      *string           `json:"assignedAgent,omitempty"`
-	Assignee           *string           `json:"assignee,omitempty"`
-	AcceptanceCriteria []string          `json:"acceptanceCriteria,omitempty"`
-	Notes              *string           `json:"notes,omitempty"`
+	Title              *string              `json:"title,omitempty"`
+	Description        *string              `json:"description,omitempty"`
+	Domain             *string              `json:"domain,omitempty"`
+	Priority           *int                 `json:"priority,omitempty"`
+	Type               *string              `json:"type,omitempty"`
+	Status             *kanban.Status       `json:"status,omitempty"`
+	AssignedAgent      *string              `json:"assignedAgent,omitempty"`
+	Assignee           *string              `json:"assignee,omitempty"`
+	AcceptanceCriteria []string             `json:"acceptanceCriteria,omitempty"`
+	Notes              *string              `json:"notes,omitempty"`
 	Requirements       *kanban.Requirements `json:"requirements,omitempty"`
 }
 
 // apiUpdateTicket updates an existing ticket.
+//
+//nolint:gocyclo // API handler with many fields is inherently complex.
 func (s *Server) apiUpdateTicket(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
@@ -350,7 +353,7 @@ func (s *Server) apiAnswerQuestion(w http.ResponseWriter, r *http.Request) {
 		req.Answer = r.FormValue("answer")
 		// Parse questionIndex from form
 		if idx := r.FormValue("questionIndex"); idx != "" {
-			fmt.Sscanf(idx, "%d", &req.QuestionIndex)
+			_, _ = fmt.Sscanf(idx, "%d", &req.QuestionIndex)
 		}
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -386,7 +389,7 @@ func (s *Server) apiAnswerQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add history entry
-	s.store.AddHistoryEntry(id, ticket.Status, "user", "Answered question: "+req.Answer[:min(50, len(req.Answer))]+"...")
+	_ = s.store.AddHistoryEntry(id, ticket.Status, "user", "Answered question: "+req.Answer[:min(50, len(req.Answer))]+"...")
 
 	// Broadcast update
 	s.Broadcast("board-update")
@@ -522,7 +525,7 @@ func (s *Server) apiAddMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Agent == "" {
-		req.Agent = "user"
+		req.Agent = "user" //nolint:goconst // Consistent agent name across file
 	}
 	if req.MessageType == "" {
 		req.MessageType = "response"
@@ -798,6 +801,8 @@ func (s *Server) apiGetTicketMessages(w http.ResponseWriter, r *http.Request) {
 }
 
 // getAvatarClass returns the CSS class for an agent's avatar.
+//
+//nolint:goconst // Case variants are intentional for matching.
 func getAvatarClass(agent string) string {
 	switch agent {
 	case "PM", "pm":
@@ -1000,7 +1005,9 @@ func (s *Server) jsonResponse(w http.ResponseWriter, data interface{}) {
 func (s *Server) jsonError(w http.ResponseWriter, message string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	if err := json.NewEncoder(w).Encode(map[string]string{"error": message}); err != nil {
+		s.logger.Error("Failed to encode JSON error response", "error", err)
+	}
 }
 
 // --- Worktree Management API ---

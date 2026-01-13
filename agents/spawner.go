@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,25 +17,28 @@ import (
 
 	"factory/agents/anthropic"
 	"factory/kanban"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // AgentType represents the type of agent.
 type AgentType string
 
 const (
-	AgentTypePM               AgentType = "pm"
-	AgentTypePMRequirements   AgentType = "pm-requirements"
-	AgentTypeExpertConsult    AgentType = "expert-consultation"
-	AgentTypeDevFrontend      AgentType = "dev-frontend"
-	AgentTypeDevBackend       AgentType = "dev-backend"
-	AgentTypeDevInfra         AgentType = "dev-infra"
-	AgentTypeQA               AgentType = "qa"
-	AgentTypeUX               AgentType = "ux"
-	AgentTypeSecurity         AgentType = "security"
-	AgentTypeIdeas            AgentType = "ideas"
+	AgentTypePM             AgentType = "pm"
+	AgentTypePMRequirements AgentType = "pm-requirements"
+	AgentTypeExpertConsult  AgentType = "expert-consultation"
+	AgentTypeDevFrontend    AgentType = "dev-frontend"
+	AgentTypeDevBackend     AgentType = "dev-backend"
+	AgentTypeDevInfra       AgentType = "dev-infra"
+	AgentTypeQA             AgentType = "qa"
+	AgentTypeUX             AgentType = "ux"
+	AgentTypeSecurity       AgentType = "security"
+	AgentTypeIdeas          AgentType = "ideas"
 
-	// Collaborative PRD agents
-	AgentTypePMFacilitator AgentType = "pm-facilitator" // PM facilitating multi-round PRD discussion
+	// Collaborative PRD agents.
+	AgentTypePMFacilitator AgentType = "pm-facilitator" // PM facilitating multi-round PRD discussion.
 	AgentTypePRDExpert     AgentType = "prd-expert"     // Domain expert in PRD discussion
 	AgentTypePMBreakdown   AgentType = "pm-breakdown"   // PM breaking PRD into sub-tickets
 )
@@ -63,13 +67,13 @@ func GetModelForAgent(agentType AgentType, defaultModel string) string {
 
 // AgentResult represents the outcome of an agent run.
 type AgentResult struct {
-	Success    bool          `json:"success"`
-	TicketID   string        `json:"ticketId,omitempty"`
-	AgentType  AgentType     `json:"agentType"`
-	Output     string        `json:"output"`
-	Duration   time.Duration `json:"duration"`
-	Error      string        `json:"error,omitempty"`
-	ExitCode   int           `json:"exitCode"`
+	Success   bool          `json:"success"`
+	TicketID  string        `json:"ticketId,omitempty"`
+	AgentType AgentType     `json:"agentType"`
+	Output    string        `json:"output"`
+	Duration  time.Duration `json:"duration"`
+	Error     string        `json:"error,omitempty"`
+	ExitCode  int           `json:"exitCode"`
 }
 
 // Spawner manages spawning and running AI agents.
@@ -106,9 +110,9 @@ func NewSpawner(promptsDir string, timeout time.Duration, verbose bool, model st
 
 // PromptData contains data passed to prompt templates.
 type PromptData struct {
-	Ticket       *kanban.Ticket `json:"ticket"`
-	TicketJSON   string         `json:"ticketJson"`
-	WorktreePath string         `json:"worktreePath"`
+	Ticket       *kanban.Ticket        `json:"ticket"`
+	TicketJSON   string                `json:"ticketJson"`
+	WorktreePath string                `json:"worktreePath"`
 	BoardStats   map[kanban.Status]int `json:"boardStats"`
 	Iteration    *kanban.Iteration     `json:"iteration"`
 
@@ -128,14 +132,14 @@ type PromptData struct {
 	ExtraContext string `json:"extraContext,omitempty"`
 
 	// For collaborative PRD discussion
-	Conversation        *kanban.PRDConversation `json:"conversation,omitempty"`
-	CurrentRound        int                     `json:"currentRound,omitempty"`
-	CurrentPrompt       string                  `json:"currentPrompt,omitempty"`
-	Agent               string                  `json:"agent,omitempty"`               // dev, qa, ux, security
-	FocusAreas          []string                `json:"focusAreas,omitempty"`          // Specific questions for this agent
-	ConversationSummary string                  `json:"conversationSummary,omitempty"` // Summary for breakdown
-	PRD                 string                  `json:"prd,omitempty"`                 // Final PRD for breakdown
-	FinalExpertInputs   map[string]kanban.ExpertInput `json:"finalExpertInputs,omitempty"` // Last round's expert inputs
+	Conversation        *kanban.PRDConversation       `json:"conversation,omitempty"`
+	CurrentRound        int                           `json:"currentRound,omitempty"`
+	CurrentPrompt       string                        `json:"currentPrompt,omitempty"`
+	Agent               string                        `json:"agent,omitempty"`               // dev, qa, ux, security
+	FocusAreas          []string                      `json:"focusAreas,omitempty"`          // Specific questions for this agent
+	ConversationSummary string                        `json:"conversationSummary,omitempty"` // Summary for breakdown
+	PRD                 string                        `json:"prd,omitempty"`                 // Final PRD for breakdown
+	FinalExpertInputs   map[string]kanban.ExpertInput `json:"finalExpertInputs,omitempty"`   // Last round's expert inputs
 
 	// RAG-retrieved context (API mode only)
 	RetrievedPatterns string `json:"retrievedPatterns,omitempty"` // Relevant code patterns
@@ -179,7 +183,7 @@ func (s *Spawner) SpawnAgent(ctx context.Context, agentType AgentType, data Prom
 func (s *Spawner) runClaude(ctx context.Context, prompt string, workDir string, model string) (*AgentResult, error) {
 	// Build command args
 	args := []string{
-		"--print",                       // Print output instead of interactive
+		"--print",                        // Print output instead of interactive
 		"--dangerously-skip-permissions", // Skip permission prompts for automation
 	}
 
@@ -188,7 +192,7 @@ func (s *Spawner) runClaude(ctx context.Context, prompt string, workDir string, 
 		args = append(args, "--model", model)
 	}
 
-	cmd := exec.CommandContext(ctx, s.claudePath, args...)
+	cmd := exec.CommandContext(ctx, s.claudePath, args...) //nolint:gosec // claudePath is validated at construction time
 
 	cmd.Dir = workDir
 	cmd.Stdin = strings.NewReader(prompt)
@@ -212,7 +216,8 @@ func (s *Spawner) runClaude(ctx context.Context, prompt string, workDir string, 
 	}
 
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			result.ExitCode = exitErr.ExitCode()
 		}
 		result.Error = stderr.String()
@@ -228,11 +233,11 @@ func (s *Spawner) runClaude(ctx context.Context, prompt string, workDir string, 
 
 // templateFuncs provides custom functions for prompt templates.
 var templateFuncs = template.FuncMap{
-	"title": strings.Title, // Title cases a string (e.g., "dev" -> "Dev")
+	"title": cases.Title(language.English).String, // Title cases a string (e.g., "dev" -> "Dev").
 	"upper": strings.ToUpper,
 	"lower": strings.ToLower,
 	"join":  strings.Join,
-	// Math functions
+	// Math functions.
 	"sub": func(a, b int) int { return a - b },
 	"add": func(a, b int) int { return a + b },
 	"mul": func(a, b int) int { return a * b },
@@ -278,7 +283,7 @@ func (s *Spawner) renderPrompt(agentType AgentType, data PromptData) (string, er
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
 				expertPath := filepath.Join(expertsDir, entry.Name())
 				if expertBytes, err := os.ReadFile(expertPath); err == nil {
-					tmpl.New(entry.Name()).Parse(string(expertBytes))
+					_, _ = tmpl.New(entry.Name()).Parse(string(expertBytes))
 				}
 			}
 		}

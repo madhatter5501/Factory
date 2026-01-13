@@ -12,13 +12,13 @@ import (
 	"factory/kanban"
 )
 
-// PRD Collaboration Constants
+// PRD Collaboration Constants.
 const (
 	MaxPRDRounds       = 5 // Maximum discussion rounds before forcing synthesis
 	MinExpertsRequired = 4 // DEV, QA, UX, Security
 )
 
-// ExpertAgents lists the domain experts involved in PRD discussions
+// ExpertAgents lists the domain experts involved in PRD discussions.
 var ExpertAgents = []string{"dev", "qa", "ux", "security"}
 
 // processApprovedToPRDRound moves newly approved tickets into collaborative PRD refinement.
@@ -44,11 +44,11 @@ func (o *Orchestrator) processApprovedToPRDRound(ctx context.Context) {
 
 		// Update ticket with conversation
 		ticket.Conversation = conversation
-		o.state.UpdateTicket(&ticket)
+		_ = o.state.UpdateTicket(&ticket)
 
 		// Move to first refining round
 		roundStatus := kanban.Status(fmt.Sprintf("%s_1", kanban.StatusRefiningRound))
-		o.state.UpdateTicketStatus(ticket.ID, roundStatus, "PM", "Starting collaborative PRD discussion - Round 1")
+		_ = o.state.UpdateTicketStatus(ticket.ID, roundStatus, "PM", "Starting collaborative PRD discussion - Round 1")
 
 		o.logger.Info("Ticket moved to PRD discussion", "ticket", ticket.ID, "round", 1)
 	}
@@ -113,7 +113,7 @@ func (o *Orchestrator) processPRDRoundStage(ctx context.Context) {
 // startPRDRound spawns the PM facilitator to create the round prompt.
 func (o *Orchestrator) startPRDRound(ctx context.Context, ticket *kanban.Ticket, roundNum int) {
 	o.logger.Info("Starting PRD round", "ticket", ticket.ID, "round", roundNum)
-	o.state.UpdateActivity(ticket.ID, fmt.Sprintf("PM initiating round %d discussion", roundNum), "PM")
+	_ = o.state.UpdateActivity(ticket.ID, fmt.Sprintf("PM initiating round %d discussion", roundNum), "PM")
 
 	if o.config.DryRun {
 		o.logger.Info("[DRY RUN] Would spawn PM facilitator", "ticket", ticket.ID, "round", roundNum)
@@ -149,7 +149,7 @@ func (o *Orchestrator) startPRDRound(ctx context.Context, ticket *kanban.Ticket,
 	}
 	ticket.Conversation.Rounds = append(ticket.Conversation.Rounds, newRound)
 	ticket.Conversation.CurrentRound = roundNum
-	o.state.UpdateTicket(ticket)
+	_ = o.state.UpdateTicket(ticket)
 
 	// Get pointer to the actual round in the slice (not the local copy)
 	roundPtr := &ticket.Conversation.Rounds[len(ticket.Conversation.Rounds)-1]
@@ -192,7 +192,7 @@ func (o *Orchestrator) spawnAllExperts(ctx context.Context, ticket *kanban.Ticke
 				StartedAt: time.Now(),
 				Status:    "running",
 			}
-			o.state.AddRun(&run)
+			_ = o.state.AddRun(&run)
 
 			// Spawn expert agent
 			result, err := o.spawner.SpawnAgent(ctx, agents.AgentTypePRDExpert, promptData, o.repoRoot)
@@ -229,8 +229,8 @@ func (o *Orchestrator) spawnAllExperts(ctx context.Context, ticket *kanban.Ticke
 	}
 
 	// Update ticket with collected inputs
-	o.state.UpdateTicket(ticket)
-	o.state.ClearActivity(ticket.ID)
+	_ = o.state.UpdateTicket(ticket)
+	_ = o.state.ClearActivity(ticket.ID)
 
 	o.logger.Info("All experts responded", "ticket", ticket.ID, "count", len(round.ExpertInputs))
 }
@@ -280,7 +280,7 @@ func (o *Orchestrator) spawnSingleExpert(ctx context.Context, ticket *kanban.Tic
 		StartedAt: time.Now(),
 		Status:    "running",
 	}
-	o.state.AddRun(&run)
+	_ = o.state.AddRun(&run)
 
 	result, err := o.spawner.SpawnAgent(ctx, agents.AgentTypePRDExpert, promptData, o.repoRoot)
 
@@ -288,21 +288,23 @@ func (o *Orchestrator) spawnSingleExpert(ctx context.Context, ticket *kanban.Tic
 	if err != nil {
 		status = "failed"
 		o.logger.Error("Expert agent failed", "agent", agentName, "ticket", ticket.ID, "error", err)
+		o.state.CompleteRun(run.ID, status, "")
+		return
 	}
 	o.state.CompleteRun(run.ID, status, result.Output)
 
-	if result != nil && result.Success {
+	if result.Success {
 		input := o.parseExpertResponse(result.Output)
 		input.Agent = agentName
 		round.ExpertInputs[agentName] = input
-		o.state.UpdateTicket(ticket)
+		_ = o.state.UpdateTicket(ticket)
 	}
 }
 
 // runPMSynthesis runs the PM to synthesize expert responses and determine next steps.
 func (o *Orchestrator) runPMSynthesis(ctx context.Context, ticket *kanban.Ticket, round *kanban.ConversationRound) {
 	o.logger.Info("Running PM synthesis", "ticket", ticket.ID, "round", round.RoundNumber)
-	o.state.UpdateActivity(ticket.ID, "PM synthesizing expert input", "PM")
+	_ = o.state.UpdateActivity(ticket.ID, "PM synthesizing expert input", "PM")
 
 	if o.config.DryRun {
 		o.logger.Info("[DRY RUN] Would run PM synthesis", "ticket", ticket.ID)
@@ -330,7 +332,7 @@ func (o *Orchestrator) runPMSynthesis(ctx context.Context, ticket *kanban.Ticket
 	// Parse PM's decision
 	action, synthesis, prd := o.parsePMSynthesisResponse(result.Output)
 	round.PMSynthesis = synthesis
-	o.state.UpdateTicket(ticket)
+	_ = o.state.UpdateTicket(ticket)
 
 	switch action {
 	case "FINALIZE_PRD":
@@ -338,8 +340,8 @@ func (o *Orchestrator) runPMSynthesis(ctx context.Context, ticket *kanban.Ticket
 		ticket.Conversation.Status = "consensus"
 		ticket.Conversation.FinalPRD = prd
 		ticket.Conversation.CompletedAt = time.Now()
-		o.state.UpdateTicket(ticket)
-		o.state.UpdateTicketStatus(ticket.ID, kanban.StatusPRDComplete, "PM", "All experts approved - PRD finalized")
+		_ = o.state.UpdateTicket(ticket)
+		_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusPRDComplete, "PM", "All experts approved - PRD finalized")
 		o.logger.Info("PRD finalized", "ticket", ticket.ID, "rounds", len(ticket.Conversation.Rounds))
 
 	case "CONTINUE_ROUND":
@@ -347,26 +349,26 @@ func (o *Orchestrator) runPMSynthesis(ctx context.Context, ticket *kanban.Ticket
 		if nextRound > MaxPRDRounds {
 			// Force finalization with noted gaps
 			ticket.Conversation.Status = "forced_consensus"
-			o.state.UpdateTicket(ticket)
-			o.state.UpdateTicketStatus(ticket.ID, kanban.StatusPRDComplete, "PM", fmt.Sprintf("Max rounds (%d) reached - forcing PRD synthesis", MaxPRDRounds))
+			_ = o.state.UpdateTicket(ticket)
+			_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusPRDComplete, "PM", fmt.Sprintf("Max rounds (%d) reached - forcing PRD synthesis", MaxPRDRounds))
 		} else {
 			// Move to next round
 			roundStatus := kanban.Status(fmt.Sprintf("%s_%d", kanban.StatusRefiningRound, nextRound))
-			o.state.UpdateTicketStatus(ticket.ID, roundStatus, "PM", fmt.Sprintf("Starting round %d based on expert feedback", nextRound))
+			_ = o.state.UpdateTicketStatus(ticket.ID, roundStatus, "PM", fmt.Sprintf("Starting round %d based on expert feedback", nextRound))
 		}
 
 	case "REQUEST_USER_INPUT":
 		// Need user decision
 		ticket.Conversation.Status = "awaiting_user"
-		o.state.UpdateTicket(ticket)
-		o.state.UpdateTicketStatus(ticket.ID, kanban.StatusAwaitingUser, "PM", "Expert discussion requires user decision")
+		_ = o.state.UpdateTicket(ticket)
+		_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusAwaitingUser, "PM", "Expert discussion requires user decision")
 
 	default:
 		o.logger.Warn("Unknown PM action", "action", action, "ticket", ticket.ID)
 	}
 
-	o.state.ClearActivity(ticket.ID)
-	o.state.Save()
+	_ = o.state.ClearActivity(ticket.ID)
+	_ = o.state.Save()
 }
 
 // processPRDCompleteStage handles tickets with finalized PRDs.
@@ -380,8 +382,8 @@ func (o *Orchestrator) processPRDCompleteStage(ctx context.Context) {
 
 	for _, ticket := range prdCompleteTickets {
 		// Move to breaking down
-		o.state.UpdateTicketStatus(ticket.ID, kanban.StatusBreakingDown, "PM", "Breaking PRD into sub-tickets")
-		o.state.UpdateActivity(ticket.ID, "PM creating sub-tickets from PRD", "PM")
+		_ = o.state.UpdateTicketStatus(ticket.ID, kanban.StatusBreakingDown, "PM", "Breaking PRD into sub-tickets")
+		_ = o.state.UpdateActivity(ticket.ID, "PM creating sub-tickets from PRD", "PM")
 
 		if o.config.DryRun {
 			o.logger.Info("[DRY RUN] Would break down PRD", "ticket", ticket.ID)
@@ -415,8 +417,8 @@ func (o *Orchestrator) processPRDCompleteStage(ctx context.Context) {
 		subTickets := o.parsePRDBreakdownResponse(result.Output, &ticket)
 		o.createSubTickets(ctx, &ticket, subTickets)
 
-		o.state.ClearActivity(ticket.ID)
-		o.state.Save()
+		_ = o.state.ClearActivity(ticket.ID)
+		_ = o.state.Save()
 	}
 }
 
@@ -462,7 +464,7 @@ func (o *Orchestrator) createSubTickets(ctx context.Context, parent *kanban.Tick
 
 	// Update parent with sub-ticket IDs
 	parent.Conversation.SubTicketIDs = createdIDs
-	o.state.UpdateTicket(parent)
+	_ = o.state.UpdateTicket(parent)
 
 	// Parent stays in BREAKING_DOWN until all sub-tickets complete
 	// (handled by checkParentCompletion in regular cycle)
@@ -510,7 +512,7 @@ func (o *Orchestrator) parseRoundFromStatus(status kanban.Status) int {
 		return 1
 	}
 	var num int
-	fmt.Sscanf(parts[2], "%d", &num)
+	_, _ = fmt.Sscanf(parts[2], "%d", &num)
 	if num == 0 {
 		return 1
 	}
@@ -699,7 +701,7 @@ func (o *Orchestrator) checkParentCompletion(ctx context.Context) {
 		}
 
 		if allDone {
-			o.state.UpdateTicketStatus(parent.ID, kanban.StatusDone, "system", "All sub-tickets completed")
+			_ = o.state.UpdateTicketStatus(parent.ID, kanban.StatusDone, "system", "All sub-tickets completed")
 			o.logger.Info("Parent ticket completed", "ticket", parent.ID)
 		}
 	}

@@ -43,9 +43,9 @@ func (p *GoogleProvider) Available() bool {
 
 // geminiRequest is the request format for Google's Gemini API.
 type geminiRequest struct {
-	Contents         []geminiContent         `json:"contents"`
-	SystemInstruction *geminiContent         `json:"systemInstruction,omitempty"`
-	GenerationConfig *geminiGenerationConfig `json:"generationConfig,omitempty"`
+	Contents          []geminiContent         `json:"contents"`
+	SystemInstruction *geminiContent          `json:"systemInstruction,omitempty"`
+	GenerationConfig  *geminiGenerationConfig `json:"generationConfig,omitempty"`
 }
 
 type geminiContent struct {
@@ -58,9 +58,9 @@ type geminiPart struct {
 }
 
 type geminiGenerationConfig struct {
-	MaxOutputTokens int       `json:"maxOutputTokens,omitempty"`
-	Temperature     *float64  `json:"temperature,omitempty"`
-	StopSequences   []string  `json:"stopSequences,omitempty"`
+	MaxOutputTokens int      `json:"maxOutputTokens,omitempty"`
+	Temperature     *float64 `json:"temperature,omitempty"`
+	StopSequences   []string `json:"stopSequences,omitempty"`
 }
 
 // geminiResponse is the response format from Google Gemini.
@@ -159,7 +159,7 @@ func (p *GoogleProvider) CreateMessage(ctx context.Context, req *MessageRequest)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Google API error (status %d): %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("google API error (status %d): %s", resp.StatusCode, string(respBody))
 	}
 
 	// Parse response

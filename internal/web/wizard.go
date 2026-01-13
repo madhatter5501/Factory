@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"factory/kanban"
+
 	"github.com/google/uuid"
 )
 
@@ -165,6 +166,8 @@ func (s *Server) apiWizard(w http.ResponseWriter, r *http.Request) {
 }
 
 // updateWizardDataFromForm updates the wizard data from form values.
+//
+//nolint:gocyclo // Form handling with many fields is inherently complex.
 func updateWizardDataFromForm(session *WizardSession, r *http.Request) {
 	d := &session.Data
 
@@ -338,6 +341,8 @@ func wizardDataToTicket(d *WizardData) *kanban.Ticket {
 }
 
 // cleanupWizardSessions removes stale wizard sessions (call periodically).
+//
+//nolint:unused // Reserved for background cleanup task.
 func cleanupWizardSessions() {
 	wizardSessionsMu.Lock()
 	defer wizardSessionsMu.Unlock()

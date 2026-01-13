@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // Register pure-Go SQLite driver.
 )
 
 // DB wraps the SQL database connection.
@@ -107,7 +107,7 @@ func (d *DB) migrate() error {
 	return nil
 }
 
-// Migration 1: Core tables
+// Migration 1: Core tables.
 const migration1 = `
 -- Tickets table
 CREATE TABLE IF NOT EXISTS tickets (
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS ticket_history (
 CREATE INDEX IF NOT EXISTS idx_ticket_history_ticket_id ON ticket_history(ticket_id);
 `
 
-// Migration 2: Agent runs
+// Migration 2: Agent runs.
 const migration2 = `
 -- Agent runs table
 CREATE TABLE IF NOT EXISTS agent_runs (
@@ -168,7 +168,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_runs_ticket_id ON agent_runs(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_agent_runs_status ON agent_runs(status);
 `
 
-// Migration 3: Config table
+// Migration 3: Config table.
 const migration3 = `
 -- Board config
 CREATE TABLE IF NOT EXISTS config (
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS iterations (
 );
 `
 
-// Migration 4: PRD conversation and parent-child relationships
+// Migration 4: PRD conversation and parent-child relationships.
 const migration4 = `
 -- Add conversation column for collaborative PRD discussion (JSON)
 ALTER TABLE tickets ADD COLUMN conversation TEXT;
@@ -213,7 +213,7 @@ CREATE INDEX IF NOT EXISTS idx_tickets_parent ON tickets(parent_id);
 CREATE INDEX IF NOT EXISTS idx_tickets_parallel_group ON tickets(parallel_group);
 `
 
-// Migration 5: Audit logging, conversations, and PM check-ins
+// Migration 5: Audit logging, conversations, and PM check-ins.
 const migration5 = `
 -- Agent command/prompt audit log
 CREATE TABLE IF NOT EXISTS agent_audit_log (
@@ -287,7 +287,7 @@ INSERT OR IGNORE INTO config (key, value) VALUES
     ('enable_audit_logging', 'true');
 `
 
-// Migration 6: Worktree management and merge queue
+// Migration 6: Worktree management and merge queue.
 const migration6 = `
 -- Global worktree pool tracking
 CREATE TABLE IF NOT EXISTS worktree_pool (
@@ -342,7 +342,7 @@ INSERT OR IGNORE INTO config (key, value) VALUES
     ('worktree_check_interval', '30');
 `
 
-// Migration 7: AI Provider Configuration
+// Migration 7: AI Provider Configuration.
 const migration7 = `
 -- Agent provider configuration (provider and model per agent type)
 CREATE TABLE IF NOT EXISTS agent_provider_config (
@@ -365,7 +365,7 @@ INSERT OR IGNORE INTO agent_provider_config (agent_type, provider, model) VALUES
     ('ideas', 'anthropic', 'claude-3-5-haiku-20241022');
 `
 
-// Migration 8: Git Provider Configuration
+// Migration 8: Git Provider Configuration.
 const migration8 = `
 -- Add git provider configuration to config table
 INSERT OR IGNORE INTO config (key, value) VALUES
@@ -373,7 +373,7 @@ INSERT OR IGNORE INTO config (key, value) VALUES
     ('git_repo_url', '');
 `
 
-// Migration 9: Message Attachments
+// Migration 9: Message Attachments.
 const migration9 = `
 -- Message attachments for sign-off reports and discussions
 CREATE TABLE IF NOT EXISTS message_attachments (
@@ -390,13 +390,13 @@ CREATE TABLE IF NOT EXISTS message_attachments (
 CREATE INDEX IF NOT EXISTS idx_attachments_message ON message_attachments(message_id);
 `
 
-// Migration 10: Agent System Prompts
+// Migration 10: Agent System Prompts.
 const migration10 = `
 -- Add system_prompt column to agent_provider_config for custom agent prompts
 ALTER TABLE agent_provider_config ADD COLUMN system_prompt TEXT;
 `
 
-// Migration 11: ADRs and Tags (N:M relationships for flexible categorization)
+// Migration 11: ADRs and Tags (N:M relationships for flexible categorization).
 const migration11 = `
 -- Architecture Decision Records captured during requirement gathering
 CREATE TABLE IF NOT EXISTS adrs (

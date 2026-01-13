@@ -76,5 +76,5 @@ func (s *Server) partialApproveTicket(w http.ResponseWriter, r *http.Request) {
 
 	// Return success message
 	w.Header().Set("HX-Trigger", "board-update")
-	w.Write([]byte(`<div class="success-toast">Ticket approved!</div>`))
+	_, _ = w.Write([]byte(`<div class="success-toast">Ticket approved!</div>`))
 }

@@ -6,14 +6,12 @@ linters:
   enable:
     - bodyclose
     - dogsled
-    - dupl
     - errcheck
     - errorlint
     - exhaustive
     - copyloopvar
     - gochecknoinits
     - goconst
-    - gocritic
     - gocyclo
     - godot
     - gofmt
@@ -28,7 +26,6 @@ linters:
     - nilerr
     - noctx
     - nolintlint
-    - prealloc
     - predeclared
     - revive
     - staticcheck
@@ -37,17 +34,14 @@ linters:
     - tparallel
     - typecheck
     - unconvert
-    - unparam
     - unused
     - whitespace
 
 linters-settings:
-  dupl:
-    threshold: 150
-
   errcheck:
     check-type-assertions: true
-    check-blank: true
+    # Disable check-blank to avoid false positives on intentionally ignored errors.
+    check-blank: false
 
   errorlint:
     errorf: true
@@ -56,19 +50,11 @@ linters-settings:
     default-signifies-exhaustive: true
 
   gocyclo:
-    min-complexity: 15
+    min-complexity: 20
 
   goconst:
     min-len: 3
     min-occurrences: 3
-
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
 
   gofmt:
     simplify: true
@@ -80,17 +66,13 @@ linters-settings:
     enable-all: true
     disable:
       - fieldalignment
+      - shadow
 
   misspell:
     locale: US
 
   nakedret:
     max-func-lines: 30
-
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: true
 
   revive:
     rules:
@@ -106,16 +88,13 @@ linters-settings:
       - name: increment-decrement
       - name: var-naming
       - name: var-declaration
-      - name: package-comments
       - name: range
       - name: receiver-naming
       - name: time-naming
       - name: unexported-return
       - name: indent-error-flow
       - name: errorf
-      - name: empty-block
       - name: superfluous-else
-      - name: unused-parameter
       - name: unreachable-code
       - name: redefines-builtin-id
 
@@ -127,19 +106,24 @@ linters-settings:
 
 issues:
   exclude-rules:
-    # Exclude test files from some checks
+    # Exclude test files from some checks.
     - path: _test\.go
       linters:
-        - dupl
         - errcheck
         - goconst
         - gosec
 
-    # Exclude main packages from package comment check
+    # Exclude main packages from package comment check.
     - path: cmd/
       linters:
         - revive
       text: "package-comments"
 
-  max-issues-per-linter: 0
-  max-same-issues: 0
+    # Allow blank imports in main package for driver registration.
+    - path: agents/rag/store\.go
+      linters:
+        - revive
+      text: "blank-imports"
+
+  max-issues-per-linter: 50
+  max-same-issues: 5

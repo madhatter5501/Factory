@@ -25,7 +25,7 @@ const (
 	StatusDone         Status = "DONE"          // Complete, merged to main
 	StatusBlocked      Status = "BLOCKED"       // Blocked by bugs or dependencies
 
-	// Collaborative PRD refinement statuses
+	// Collaborative PRD refinement statuses.
 	StatusRefiningRound Status = "REFINING_ROUND" // PM facilitating multi-round discussion (append round number)
 	StatusPRDComplete   Status = "PRD_COMPLETE"   // All experts reached consensus, PRD finalized
 	StatusBreakingDown  Status = "BREAKING_DOWN"  // PM creating sub-tickets from PRD
@@ -82,22 +82,22 @@ type Bug struct {
 // ExpertConsultation tracks a domain expert's input during requirements refinement.
 // DEPRECATED: Use PRDConversation for collaborative multi-round discussions.
 type ExpertConsultation struct {
-	Domain    Domain    `json:"domain"`    // Which domain expert was consulted
-	Question  string    `json:"question"`  // PM's question
-	Response  string    `json:"response"`  // Expert's answer
-	AskedAt   time.Time `json:"askedAt"`
+	Domain     Domain    `json:"domain"`   // Which domain expert was consulted
+	Question   string    `json:"question"` // PM's question
+	Response   string    `json:"response"` // Expert's answer
+	AskedAt    time.Time `json:"askedAt"`
 	AnsweredAt time.Time `json:"answeredAt,omitempty"`
 }
 
 // ExpertInput captures a single expert's response in a PRD discussion round.
 type ExpertInput struct {
-	Agent             string   `json:"agent"`             // "dev", "qa", "ux", "security"
-	Response          string   `json:"response"`          // Full response text
-	KeyPoints         []string `json:"keyPoints"`         // Extracted key points
-	Concerns          []string `json:"concerns"`          // Any concerns raised
+	Agent              string   `json:"agent"`              // "dev", "qa", "ux", "security"
+	Response           string   `json:"response"`           // Full response text
+	KeyPoints          []string `json:"keyPoints"`          // Extracted key points
+	Concerns           []string `json:"concerns"`           // Any concerns raised
 	QuestionsForOthers []string `json:"questionsForOthers"` // Questions for other experts
-	Approves          bool     `json:"approves"`          // Ready to proceed?
-	Reasoning         string   `json:"reasoning"`         // Why they approve or what's blocking
+	Approves           bool     `json:"approves"`           // Ready to proceed?
+	Reasoning          string   `json:"reasoning"`          // Why they approve or what's blocking
 }
 
 // ConversationRound represents one round of the PM-facilitated PRD discussion.
@@ -113,10 +113,10 @@ type ConversationRound struct {
 type PRDConversation struct {
 	TicketID      string              `json:"ticketId"`
 	Rounds        []ConversationRound `json:"rounds"`
-	CurrentRound  int                 `json:"currentRound"`        // Which round we're currently in
-	Status        string              `json:"status"`              // "in_progress", "consensus", "blocked", "awaiting_user"
-	FinalPRD      string              `json:"finalPrd,omitempty"`  // Final PRD document after consensus
-	SubTicketIDs  []string            `json:"subTicketIds,omitempty"` // Created sub-ticket IDs
+	CurrentRound  int                 `json:"currentRound"`            // Which round we're currently in
+	Status        string              `json:"status"`                  // "in_progress", "consensus", "blocked", "awaiting_user"
+	FinalPRD      string              `json:"finalPrd,omitempty"`      // Final PRD document after consensus
+	SubTicketIDs  []string            `json:"subTicketIds,omitempty"`  // Created sub-ticket IDs
 	UserQuestions []Question          `json:"userQuestions,omitempty"` // Questions for user during discussion
 	StartedAt     time.Time           `json:"startedAt"`
 	CompletedAt   time.Time           `json:"completedAt,omitempty"`
@@ -131,9 +131,9 @@ type Question struct {
 // Requirements tracks the refinement process for a ticket.
 type Requirements struct {
 	// Analysis
-	PMAnalysis      string     `json:"pmAnalysis,omitempty"`      // PM's initial analysis
-	Questions       []Question `json:"questions,omitempty"`       // Open questions that need answers
-	TechnicalNotes  string     `json:"technicalNotes,omitempty"`  // Technical considerations
+	PMAnalysis     string     `json:"pmAnalysis,omitempty"`     // PM's initial analysis
+	Questions      []Question `json:"questions,omitempty"`      // Open questions that need answers
+	TechnicalNotes string     `json:"technicalNotes,omitempty"` // Technical considerations
 
 	// Expert consultations
 	Consultations []ExpertConsultation `json:"consultations,omitempty"`
@@ -143,9 +143,9 @@ type Requirements struct {
 	FinalCriteria    []string `json:"finalCriteria,omitempty"`    // Refined acceptance criteria
 
 	// User review
-	UserEdits       string    `json:"userEdits,omitempty"`       // Notes from user edits
-	UserApprovedAt  time.Time `json:"userApprovedAt,omitempty"`  // When user approved requirements
-	UserApprovedBy  string    `json:"userApprovedBy,omitempty"`  // Who approved (from Notion)
+	UserEdits      string    `json:"userEdits,omitempty"`      // Notes from user edits
+	UserApprovedAt time.Time `json:"userApprovedAt,omitempty"` // When user approved requirements
+	UserApprovedBy string    `json:"userApprovedBy,omitempty"` // Who approved (from Notion)
 
 	// Timestamps
 	StartedAt   time.Time `json:"startedAt,omitempty"`
@@ -154,23 +154,23 @@ type Requirements struct {
 
 // HistoryEntry tracks state transitions.
 type HistoryEntry struct {
-	Status    Status    `json:"status"`
-	At        time.Time `json:"at"`
-	By        string    `json:"by"` // Agent that made the change
-	Note      string    `json:"note,omitempty"`
+	Status Status    `json:"status"`
+	At     time.Time `json:"at"`
+	By     string    `json:"by"` // Agent that made the change
+	Note   string    `json:"note,omitempty"`
 }
 
 // TimeStats holds computed timing statistics for a ticket.
 type TimeStats struct {
-	TotalWorkTime    time.Duration            `json:"totalWorkTime"`    // Total time agents actively worked
-	TotalIdleTime    time.Duration            `json:"totalIdleTime"`    // Total time ticket sat waiting
-	TotalCycleTime   time.Duration            `json:"totalCycleTime"`   // Total time from creation to completion
-	StatusDurations  map[Status]time.Duration `json:"statusDurations"`  // Time spent in each status
-	AgentWorkTimes   map[string]time.Duration `json:"agentWorkTimes"`   // Work time per agent type
-	LastActivityAt   time.Time                `json:"lastActivityAt"`   // When last agent activity occurred
-	IdleSince        time.Time                `json:"idleSince"`        // When ticket became idle (if currently idle)
-	CurrentIdleTime  time.Duration            `json:"currentIdleTime"`  // How long it's been idle
-	AgentRunCount    int                      `json:"agentRunCount"`    // Number of agent runs
+	TotalWorkTime   time.Duration            `json:"totalWorkTime"`   // Total time agents actively worked
+	TotalIdleTime   time.Duration            `json:"totalIdleTime"`   // Total time ticket sat waiting
+	TotalCycleTime  time.Duration            `json:"totalCycleTime"`  // Total time from creation to completion
+	StatusDurations map[Status]time.Duration `json:"statusDurations"` // Time spent in each status
+	AgentWorkTimes  map[string]time.Duration `json:"agentWorkTimes"`  // Work time per agent type
+	LastActivityAt  time.Time                `json:"lastActivityAt"`  // When last agent activity occurred
+	IdleSince       time.Time                `json:"idleSince"`       // When ticket became idle (if currently idle)
+	CurrentIdleTime time.Duration            `json:"currentIdleTime"` // How long it's been idle
+	AgentRunCount   int                      `json:"agentRunCount"`   // Number of agent runs
 }
 
 // Worktree tracks the git worktree for this ticket.
@@ -198,15 +198,15 @@ type Constraints struct {
 
 // BlockedReason explains why a ticket is blocked (for human supervisors).
 type BlockedReason struct {
-	Category    string `json:"category"`    // dependency, bug, policy, confidence, ambiguous
-	Summary     string `json:"summary"`     // One-sentence human explanation
-	TicketID    string `json:"ticketId,omitempty"`    // Related blocking ticket if dependency
-	IsManaged   bool   `json:"isManaged"`   // Is the system actively addressing this?
+	Category  string `json:"category"`           // dependency, bug, policy, confidence, ambiguous
+	Summary   string `json:"summary"`            // One-sentence human explanation
+	TicketID  string `json:"ticketId,omitempty"` // Related blocking ticket if dependency
+	IsManaged bool   `json:"isManaged"`          // Is the system actively addressing this?
 }
 
 // CreationContext explains why a ticket was created (for human supervisors).
 type CreationContext struct {
-	Reason      string `json:"reason"`      // prd_breakdown, detected_issue, dependency, user_request
+	Reason      string `json:"reason"`                // prd_breakdown, detected_issue, dependency, user_request
 	ParentTitle string `json:"parentTitle,omitempty"` // Title of parent ticket if from breakdown
 	Details     string `json:"details,omitempty"`     // Additional context
 }
@@ -215,18 +215,18 @@ type CreationContext struct {
 type SystemHealthStatus string
 
 const (
-	SystemHealthStable      SystemHealthStatus = "stable"      // Normal operation
-	SystemHealthThrashing   SystemHealthStatus = "thrashing"   // Work cycling without progress
-	SystemHealthReworking   SystemHealthStatus = "reworking"   // High rejection/rework rate
+	SystemHealthStable       SystemHealthStatus = "stable"       // Normal operation
+	SystemHealthThrashing    SystemHealthStatus = "thrashing"    // Work cycling without progress
+	SystemHealthReworking    SystemHealthStatus = "reworking"    // High rejection/rework rate
 	SystemHealthAccumulating SystemHealthStatus = "accumulating" // Blocked work piling up
-	SystemHealthStalled     SystemHealthStatus = "stalled"     // No progress being made
+	SystemHealthStalled      SystemHealthStatus = "stalled"      // No progress being made
 )
 
 // SystemHealth provides a summary of factory health for human supervisors.
 type SystemHealth struct {
 	Status           SystemHealthStatus `json:"status"`
-	StatusLabel      string             `json:"statusLabel"`      // Human-readable status
-	Message          string             `json:"message"`          // Explanation of current state
+	StatusLabel      string             `json:"statusLabel"` // Human-readable status
+	Message          string             `json:"message"`     // Explanation of current state
 	BlockedCount     int                `json:"blockedCount"`
 	ActiveCount      int                `json:"activeCount"`
 	BlockedRatio     float64            `json:"blockedRatio"`     // Blocked / (Active + Blocked)
@@ -270,8 +270,8 @@ type Ticket struct {
 
 	// Pipeline state
 	Status          Status   `json:"status"`
-	AssignedAgent   string   `json:"assignedAgent,omitempty"` // dev-frontend, dev-backend, etc.
-	Assignee        string   `json:"assignee,omitempty"`      // Short agent name for display
+	AssignedAgent   string   `json:"assignedAgent,omitempty"`   // dev-frontend, dev-backend, etc.
+	Assignee        string   `json:"assignee,omitempty"`        // Short agent name for display
 	CurrentActivity string   `json:"currentActivity,omitempty"` // What the agent is currently doing
 	Signoffs        Signoffs `json:"signoffs"`
 	Bugs            []Bug    `json:"bugs,omitempty"`
@@ -291,8 +291,8 @@ type Ticket struct {
 	Tags []Tag `json:"tags,omitempty"`
 
 	// Human supervisor context (computed/populated for UI display)
-	BlockedReason    *BlockedReason   `json:"blockedReason,omitempty"`    // Why this is blocked
-	CreationContext  *CreationContext `json:"creationContext,omitempty"` // Why this was created
+	BlockedReason   *BlockedReason   `json:"blockedReason,omitempty"`   // Why this is blocked
+	CreationContext *CreationContext `json:"creationContext,omitempty"` // Why this was created
 }
 
 // Iteration represents a sprint/iteration of work.
@@ -307,9 +307,17 @@ type Iteration struct {
 }
 
 // AgentRun tracks a single agent execution.
+// AgentRunStatus constants for agent run statuses.
+const (
+	AgentRunStatusRunning = "running"
+	AgentRunStatusSuccess = "success"
+	AgentRunStatusFailed  = "failed"
+)
+
+// AgentRun represents an agent execution.
 type AgentRun struct {
 	ID        string    `json:"id"`
-	Agent     string    `json:"agent"`     // pm, dev-frontend, qa, etc.
+	Agent     string    `json:"agent"` // pm, dev-frontend, qa, etc.
 	TicketID  string    `json:"ticketId"`
 	Worktree  string    `json:"worktree"`
 	StartedAt time.Time `json:"startedAt"`
@@ -331,20 +339,20 @@ func (r AgentRun) Duration() time.Duration {
 type AuditEventType string
 
 const (
-	AuditEventPromptSent      AuditEventType = "prompt_sent"
+	AuditEventPromptSent       AuditEventType = "prompt_sent"
 	AuditEventResponseReceived AuditEventType = "response_received"
-	AuditEventToolCall        AuditEventType = "tool_call"
-	AuditEventError           AuditEventType = "error"
+	AuditEventToolCall         AuditEventType = "tool_call"
+	AuditEventError            AuditEventType = "error"
 )
 
 // AuditEntry represents a single audit log entry capturing agent interactions.
 type AuditEntry struct {
 	ID          string         `json:"id"`
-	RunID       string         `json:"runId,omitempty"`       // Reference to AgentRun
+	RunID       string         `json:"runId,omitempty"` // Reference to AgentRun
 	TicketID    string         `json:"ticketId"`
 	Agent       string         `json:"agent"`
 	EventType   AuditEventType `json:"eventType"`
-	EventData   string         `json:"eventData,omitempty"`   // JSON: prompt, response, tool args, etc.
+	EventData   string         `json:"eventData,omitempty"` // JSON: prompt, response, tool args, etc.
 	TokenInput  int            `json:"tokenInput,omitempty"`
 	TokenOutput int            `json:"tokenOutput,omitempty"`
 	DurationMs  int            `json:"durationMs,omitempty"`
@@ -361,7 +369,7 @@ const (
 	ThreadTypeBlocker       ThreadType = "blocker"
 	ThreadTypeUserQuestion  ThreadType = "user_question"
 
-	// Sign-off report thread types - created when agents complete reviews
+	// Sign-off report thread types - created when agents complete reviews.
 	ThreadTypeDevSignoff      ThreadType = "dev_signoff"
 	ThreadTypeQASignoff       ThreadType = "qa_signoff"
 	ThreadTypeUXSignoff       ThreadType = "ux_signoff"
@@ -380,13 +388,13 @@ const (
 
 // TicketConversation represents a threaded conversation about a ticket during development.
 type TicketConversation struct {
-	ID         string       `json:"id"`
-	TicketID   string       `json:"ticketId"`
-	ThreadType ThreadType   `json:"threadType"`
-	Title      string       `json:"title,omitempty"`
-	Status     ThreadStatus `json:"status"`
-	CreatedAt  time.Time    `json:"createdAt"`
-	ResolvedAt time.Time    `json:"resolvedAt,omitempty"`
+	ID         string                `json:"id"`
+	TicketID   string                `json:"ticketId"`
+	ThreadType ThreadType            `json:"threadType"`
+	Title      string                `json:"title,omitempty"`
+	Status     ThreadStatus          `json:"status"`
+	CreatedAt  time.Time             `json:"createdAt"`
+	ResolvedAt time.Time             `json:"resolvedAt,omitempty"`
 	Messages   []ConversationMessage `json:"messages,omitempty"` // Populated on fetch
 }
 
@@ -394,11 +402,11 @@ type TicketConversation struct {
 type MessageType string
 
 const (
-	MessageTypeQuestion     MessageType = "question"
-	MessageTypeResponse     MessageType = "response"
-	MessageTypeDecision     MessageType = "decision"
-	MessageTypeStatusUpdate MessageType = "status_update"
-	MessageTypeBlocker      MessageType = "blocker"
+	MessageTypeQuestion      MessageType = "question"
+	MessageTypeResponse      MessageType = "response"
+	MessageTypeDecision      MessageType = "decision"
+	MessageTypeStatusUpdate  MessageType = "status_update"
+	MessageTypeBlocker       MessageType = "blocker"
 	MessageTypeSignoffReport MessageType = "signoff_report" // Structured review findings
 )
 
@@ -409,7 +417,7 @@ type ConversationMessage struct {
 	Agent          string       `json:"agent"` // pm, dev-frontend, qa, user, etc.
 	MessageType    MessageType  `json:"messageType"`
 	Content        string       `json:"content"`
-	Metadata       string       `json:"metadata,omitempty"` // JSON: additional context
+	Metadata       string       `json:"metadata,omitempty"`    // JSON: additional context
 	Attachments    []Attachment `json:"attachments,omitempty"` // Populated on fetch
 	CreatedAt      time.Time    `json:"createdAt"`
 }
@@ -427,18 +435,18 @@ type Attachment struct {
 
 // SignoffReport represents parsed agent review output for sign-off documentation.
 type SignoffReport struct {
-	Status           string            `json:"status"` // passed, failed
-	Agent            string            `json:"agent"`
-	TicketID         string            `json:"ticket_id"`
-	Summary          string            `json:"summary,omitempty"`
-	ChecksPerformed  []string          `json:"checks_performed,omitempty"`
-	CriteriaVerified []string          `json:"criteria_verified,omitempty"`
-	TestsRun         *TestRunResult    `json:"tests_run,omitempty"`
-	Findings         []SignoffFinding  `json:"findings,omitempty"`
-	Bugs             []Bug             `json:"bugs,omitempty"`
-	UnmetCriteria    []string          `json:"unmet_criteria,omitempty"`
-	Notes            string            `json:"notes,omitempty"`
-	Reason           string            `json:"reason,omitempty"` // For failures
+	Status           string           `json:"status"` // passed, failed
+	Agent            string           `json:"agent"`
+	TicketID         string           `json:"ticket_id"`
+	Summary          string           `json:"summary,omitempty"`
+	ChecksPerformed  []string         `json:"checks_performed,omitempty"`
+	CriteriaVerified []string         `json:"criteria_verified,omitempty"`
+	TestsRun         *TestRunResult   `json:"tests_run,omitempty"`
+	Findings         []SignoffFinding `json:"findings,omitempty"`
+	Bugs             []Bug            `json:"bugs,omitempty"`
+	UnmetCriteria    []string         `json:"unmet_criteria,omitempty"`
+	Notes            string           `json:"notes,omitempty"`
+	Reason           string           `json:"reason,omitempty"` // For failures
 }
 
 // TestRunResult holds test execution statistics.
@@ -452,7 +460,7 @@ type TestRunResult struct {
 // SignoffFinding represents an issue found during review.
 type SignoffFinding struct {
 	ID             string `json:"id,omitempty"`
-	Severity       string `json:"severity"` // critical, high, medium, low
+	Severity       string `json:"severity"`           // critical, high, medium, low
 	Category       string `json:"category,omitempty"` // For UX: accessibility, usability, consistency
 	Title          string `json:"title,omitempty"`
 	Description    string `json:"description"`
@@ -481,7 +489,7 @@ type PMCheckin struct {
 	ConversationID string             `json:"conversationId,omitempty"` // Links to thread if created
 	CheckinType    CheckinType        `json:"checkinType"`
 	Summary        string             `json:"summary"`
-	Findings       *PMCheckinFindings `json:"findings,omitempty"` // Structured findings from check-in
+	Findings       *PMCheckinFindings `json:"findings,omitempty"`       // Structured findings from check-in
 	ActionRequired string             `json:"actionRequired,omitempty"` // What needs to happen
 	Resolved       bool               `json:"resolved"`
 	CreatedAt      time.Time          `json:"createdAt"`
@@ -561,10 +569,10 @@ type WorktreeEvent struct {
 
 // WorktreePoolStats provides statistics about the worktree pool.
 type WorktreePoolStats struct {
-	ActiveCount   int `json:"activeCount"`
-	MergingCount  int `json:"mergingCount"`
-	PendingCount  int `json:"pendingCount"` // Tickets waiting for worktree slot
-	Limit         int `json:"limit"`
+	ActiveCount    int `json:"activeCount"`
+	MergingCount   int `json:"mergingCount"`
+	PendingCount   int `json:"pendingCount"` // Tickets waiting for worktree slot
+	Limit          int `json:"limit"`
 	AvailableSlots int `json:"availableSlots"`
 }
 
@@ -821,6 +829,8 @@ func ComputeSystemHealth(tickets []Ticket) *SystemHealth {
 			done++
 		case StatusInDev, StatusInQA, StatusInUX, StatusInSec, StatusPMReview:
 			active++
+		default:
+			// Other statuses (Backlog, Approved, Refining, etc.) are not counted in health metrics.
 		}
 
 		// Count rework (tickets that went backwards in the pipeline)

@@ -106,11 +106,11 @@ func (m *mockSpawner) GetExpertDomains() []string {
 
 // mockState implements kanban.StateStore for testing.
 type mockState struct {
-	mu         sync.Mutex
-	tickets    map[string]*kanban.Ticket
-	runs       []kanban.AgentRun
-	stats      map[kanban.Status]int
-	iteration  *kanban.Iteration
+	mu        sync.Mutex
+	tickets   map[string]*kanban.Ticket
+	runs      []kanban.AgentRun
+	stats     map[kanban.Status]int
+	iteration *kanban.Iteration
 }
 
 func newMockState() *mockState {
@@ -120,30 +120,32 @@ func newMockState() *mockState {
 	}
 }
 
-func (m *mockState) Load() error                                { return nil }
-func (m *mockState) Save() error                                { return nil }
-func (m *mockState) GetBoard() kanban.Board                     { return kanban.Board{} }
-func (m *mockState) GetConfig() kanban.BoardConfig              { return kanban.BoardConfig{} }
-func (m *mockState) GetStats() map[kanban.Status]int            { return m.stats }
-func (m *mockState) SetIteration(iter *kanban.Iteration)        { m.iteration = iter }
-func (m *mockState) GetIteration() *kanban.Iteration            { return m.iteration }
-func (m *mockState) IsIterationComplete() bool                  { return false }
-func (m *mockState) GetReadyTickets() []kanban.Ticket           { return m.GetTicketsByStatus(kanban.StatusReady) }
+func (m *mockState) Load() error                         { return nil }
+func (m *mockState) Save() error                         { return nil }
+func (m *mockState) GetBoard() kanban.Board              { return kanban.Board{} }
+func (m *mockState) GetConfig() kanban.BoardConfig       { return kanban.BoardConfig{} }
+func (m *mockState) GetStats() map[kanban.Status]int     { return m.stats }
+func (m *mockState) SetIteration(iter *kanban.Iteration) { m.iteration = iter }
+func (m *mockState) GetIteration() *kanban.Iteration     { return m.iteration }
+func (m *mockState) IsIterationComplete() bool           { return false }
+func (m *mockState) GetReadyTickets() []kanban.Ticket {
+	return m.GetTicketsByStatus(kanban.StatusReady)
+}
 func (m *mockState) GetNextTicketForDomain(d kanban.Domain) (*kanban.Ticket, bool) { return nil, false }
-func (m *mockState) GetInProgressCount() int                    { return 0 }
-func (m *mockState) AssignAgent(ticketID, agentID string) error { return nil }
-func (m *mockState) SetWorktree(ticketID string, wt *kanban.Worktree) error { return nil }
-func (m *mockState) AddSignoff(ticketID, stage, agentID string) error { return nil }
-func (m *mockState) AddBug(ticketID string, bug kanban.Bug) error { return nil }
-func (m *mockState) UpdateNotes(ticketID, notes string) error   { return nil }
-func (m *mockState) UpdateActivity(ticketID, activity, assignee string) error { return nil }
-func (m *mockState) ClearActivity(ticketID string) error        { return nil }
-func (m *mockState) CleanupStaleRuns(maxAge time.Duration)      {}
-func (m *mockState) CleanupStaleRunningAgents(maxRunDuration time.Duration) int { return 0 }
-func (m *mockState) CleanupOrphanedRunningAgents() int          { return 0 }
-func (m *mockState) IsAgentRunning(ticketID, agentType string) bool { return false }
-func (m *mockState) CreateConversation(conv *kanban.TicketConversation) error { return nil }
-func (m *mockState) AddConversationMessage(msg *kanban.ConversationMessage) error { return nil }
+func (m *mockState) GetInProgressCount() int                                       { return 0 }
+func (m *mockState) AssignAgent(ticketID, agentID string) error                    { return nil }
+func (m *mockState) SetWorktree(ticketID string, wt *kanban.Worktree) error        { return nil }
+func (m *mockState) AddSignoff(ticketID, stage, agentID string) error              { return nil }
+func (m *mockState) AddBug(ticketID string, bug kanban.Bug) error                  { return nil }
+func (m *mockState) UpdateNotes(ticketID, notes string) error                      { return nil }
+func (m *mockState) UpdateActivity(ticketID, activity, assignee string) error      { return nil }
+func (m *mockState) ClearActivity(ticketID string) error                           { return nil }
+func (m *mockState) CleanupStaleRuns(maxAge time.Duration)                         {}
+func (m *mockState) CleanupStaleRunningAgents(maxRunDuration time.Duration) int    { return 0 }
+func (m *mockState) CleanupOrphanedRunningAgents() int                             { return 0 }
+func (m *mockState) IsAgentRunning(ticketID, agentType string) bool                { return false }
+func (m *mockState) CreateConversation(conv *kanban.TicketConversation) error      { return nil }
+func (m *mockState) AddConversationMessage(msg *kanban.ConversationMessage) error  { return nil }
 
 func (m *mockState) GetTicket(id string) (*kanban.Ticket, bool) {
 	m.mu.Lock()
@@ -422,7 +424,7 @@ func createReadySubTicket(id, parentID, title string, files []string) *kanban.Ti
 
 // --- AC Tests ---
 
-// AC-1: Multi-Round Discussion Initiation
+// AC-1: Multi-Round Discussion Initiation.
 func TestAC1_PRDDiscussionInitiation(t *testing.T) {
 	state := newMockState()
 	spawner := newMockSpawner()
@@ -471,7 +473,7 @@ func TestAC1_PRDDiscussionInitiation(t *testing.T) {
 	}
 }
 
-// AC-2: Expert Receives Full Context
+// AC-2: Expert Receives Full Context.
 func TestAC2_ExpertReceivesFullContext(t *testing.T) {
 	// Create ticket with 2 rounds of history
 	rounds := []kanban.ConversationRound{
@@ -527,7 +529,7 @@ func TestAC2_ExpertReceivesFullContext(t *testing.T) {
 	}
 }
 
-// AC-3: PM Synthesizes After Each Round
+// AC-3: PM Synthesizes After Each Round.
 func TestAC3_PMSynthesizesRound(t *testing.T) {
 	state := newMockState()
 	ticket := createTicketWithExpertResponses("TEST-003")
@@ -556,7 +558,7 @@ func TestAC3_PMSynthesizesRound(t *testing.T) {
 	}
 }
 
-// AC-4: Consensus Detection
+// AC-4: Consensus Detection.
 func TestAC4_ConsensusDetection(t *testing.T) {
 	ticket := createTicketWithExpertResponses("TEST-004")
 
@@ -577,7 +579,7 @@ func TestAC4_ConsensusDetection(t *testing.T) {
 	// The PM facilitator would output action: "FINALIZE_PRD"
 }
 
-// AC-5: Continued Discussion on Concerns
+// AC-5: Continued Discussion on Concerns.
 func TestAC5_ContinuedDiscussionOnConcerns(t *testing.T) {
 	ticket := createTicketWithSecurityConcern("TEST-005")
 
@@ -606,7 +608,7 @@ func TestAC5_ContinuedDiscussionOnConcerns(t *testing.T) {
 	// In real orchestrator, PM synthesis would trigger another round
 }
 
-// AC-6: PRD Breakdown Creates Sub-Tickets
+// AC-6: PRD Breakdown Creates Sub-Tickets.
 func TestAC6_PRDBreakdown(t *testing.T) {
 	state := newMockState()
 	ticket := createCompletedPRDTicket("TEST-006")
@@ -677,7 +679,7 @@ func TestAC6_PRDBreakdown(t *testing.T) {
 	}
 }
 
-// AC-7: Parallel Execution Respects File Conflicts
+// AC-7: Parallel Execution Respects File Conflicts.
 func TestAC7_ParallelExecutionRespectsConflicts(t *testing.T) {
 	// Test file pattern overlap detection
 	testCases := []struct {
@@ -701,7 +703,7 @@ func TestAC7_ParallelExecutionRespectsConflicts(t *testing.T) {
 	}
 }
 
-// AC-8: Max 3 Parallel DEV Agents
+// AC-8: Max 3 Parallel DEV Agents.
 func TestAC8_MaxParallelDevAgents(t *testing.T) {
 	state := newMockState()
 
@@ -732,15 +734,15 @@ func TestAC8_MaxParallelDevAgents(t *testing.T) {
 	}
 }
 
-// AC-9: Sub-Ticket Completion Updates Parent
+// AC-9: Sub-Ticket Completion Updates Parent.
 func TestAC9_ParentCompletionOnAllSubsDone(t *testing.T) {
 	state := newMockState()
 
 	// Create parent ticket in BREAKING_DOWN status
 	parent := &kanban.Ticket{
-		ID:          "PARENT-001",
-		Title:       "Parent PRD ticket",
-		Status:      kanban.StatusBreakingDown,
+		ID:     "PARENT-001",
+		Title:  "Parent PRD ticket",
+		Status: kanban.StatusBreakingDown,
 		Conversation: &kanban.PRDConversation{
 			TicketID:     "PARENT-001",
 			SubTicketIDs: []string{"SUB-1", "SUB-2", "SUB-3", "SUB-4"},
@@ -777,7 +779,7 @@ func TestAC9_ParentCompletionOnAllSubsDone(t *testing.T) {
 	}
 }
 
-// AC-10: User Can Participate in Discussion
+// AC-10: User Can Participate in Discussion.
 func TestAC10_UserParticipationInDiscussion(t *testing.T) {
 	ticket := &kanban.Ticket{
 		ID:     "TEST-010",
@@ -796,6 +798,11 @@ func TestAC10_UserParticipationInDiscussion(t *testing.T) {
 				{RoundNumber: 1, PMPrompt: "Initial analysis"},
 			},
 		},
+	}
+
+	// Verify ticket setup
+	if ticket.ID != "TEST-010" || ticket.Title == "" {
+		t.Error("Test fixture not properly initialized")
 	}
 
 	// Verify ticket is awaiting user
@@ -844,4 +851,3 @@ func patternsOverlap(pattern1, pattern2 string) bool {
 
 	return false
 }
-

@@ -26,8 +26,8 @@ type AuditLogger interface {
 
 // StoreAuditLogger implements AuditLogger using a StateStore.
 type StoreAuditLogger struct {
-	store    AuditStore
-	enabled  bool
+	store   AuditStore
+	enabled bool
 }
 
 // AuditStore is the interface that the store must implement for audit logging.
@@ -39,7 +39,7 @@ type AuditStore interface {
 // NewStoreAuditLogger creates a new store-backed audit logger.
 func NewStoreAuditLogger(store AuditStore) *StoreAuditLogger {
 	enabled := true
-	if v, _ := store.GetConfigValue("enable_audit_logging"); v == "false" {
+	if v, err := store.GetConfigValue("enable_audit_logging"); err == nil && v == "false" {
 		enabled = false
 	}
 
@@ -87,10 +87,10 @@ func (l *StoreAuditLogger) LogResponseReceived(runID, ticketID, agent, response 
 
 	// Create structured event data
 	data := map[string]interface{}{
-		"response":    response,
-		"token_input": tokenIn,
+		"response":     response,
+		"token_input":  tokenIn,
 		"token_output": tokenOut,
-		"duration_ms": durationMs,
+		"duration_ms":  durationMs,
 	}
 
 	// Truncate response if needed
@@ -100,7 +100,10 @@ func (l *StoreAuditLogger) LogResponseReceived(runID, ticketID, agent, response 
 		data["original_length"] = len(response)
 	}
 
-	eventDataJSON, _ := json.Marshal(data)
+	eventDataJSON, err := json.Marshal(data)
+	if err != nil {
+		eventDataJSON = []byte("{}")
+	}
 
 	entry := &kanban.AuditEntry{
 		ID:          generateID(),
@@ -128,7 +131,10 @@ func (l *StoreAuditLogger) LogToolCall(runID, ticketID, agent, tool, args string
 		"tool": tool,
 		"args": args,
 	}
-	eventDataJSON, _ := json.Marshal(data)
+	eventDataJSON, err := json.Marshal(data)
+	if err != nil {
+		eventDataJSON = []byte("{}")
+	}
 
 	entry := &kanban.AuditEntry{
 		ID:        generateID(),
@@ -165,10 +171,12 @@ func (l *StoreAuditLogger) LogError(runID, ticketID, agent, errorMsg string) err
 // NoOpAuditLogger is an audit logger that does nothing (for when logging is disabled).
 type NoOpAuditLogger struct{}
 
-func (l *NoOpAuditLogger) LogPromptSent(runID, ticketID, agent, prompt string) error { return nil }
-func (l *NoOpAuditLogger) LogResponseReceived(runID, ticketID, agent, response string, tokenIn, tokenOut int, durationMs int) error { return nil }
-func (l *NoOpAuditLogger) LogToolCall(runID, ticketID, agent, tool, args string) error { return nil }
-func (l *NoOpAuditLogger) LogError(runID, ticketID, agent, errorMsg string) error { return nil }
+func (l *NoOpAuditLogger) LogPromptSent(_, _, _, _ string) error { return nil }
+func (l *NoOpAuditLogger) LogResponseReceived(_, _, _, _ string, _, _, _ int) error {
+	return nil
+}
+func (l *NoOpAuditLogger) LogToolCall(_, _, _, _, _ string) error { return nil }
+func (l *NoOpAuditLogger) LogError(_, _, _, _ string) error       { return nil }
 
 // AuditingSpawner wraps an AgentSpawner to add audit logging.
 type AuditingSpawner struct {
@@ -198,12 +206,10 @@ func (s *AuditingSpawner) SpawnAgent(ctx context.Context, agentType AgentType, d
 		runID = string(agentType) + "-" + startTime.Format("20060102-150405")
 	}
 
-	// Log the prompt (we'll render it ourselves for logging)
-	// Note: The actual prompt rendering happens inside the spawner, so we log the data we have
+	// Log the prompt (we'll render it ourselves for logging).
+	// Note: The actual prompt rendering happens inside the spawner, so we log the data we have.
 	promptSummary := formatPromptSummary(agentType, data)
-	if err := s.logger.LogPromptSent(runID, ticketID, string(agentType), promptSummary); err != nil {
-		// Non-fatal - continue with agent execution
-	}
+	_ = s.logger.LogPromptSent(runID, ticketID, string(agentType), promptSummary) // Non-fatal, continue on error
 
 	// Run the actual agent
 	result, err := s.inner.SpawnAgent(ctx, agentType, data, workDir)
@@ -211,19 +217,19 @@ func (s *AuditingSpawner) SpawnAgent(ctx context.Context, agentType AgentType, d
 	durationMs := int(time.Since(startTime).Milliseconds())
 
 	if err != nil {
-		// Log the error
-		s.logger.LogError(runID, ticketID, string(agentType), err.Error())
+		// Log the error.
+		_ = s.logger.LogError(runID, ticketID, string(agentType), err.Error())
 		return result, err
 	}
 
-	// Log the response
-	// Token counts aren't available for CLI mode, but will be for API mode
+	// Log the response.
+	// Token counts aren't available for CLI mode, but will be for API mode.
 	tokenIn, tokenOut := 0, 0
 	if result != nil {
-		s.logger.LogResponseReceived(runID, ticketID, string(agentType), result.Output, tokenIn, tokenOut, durationMs)
+		_ = s.logger.LogResponseReceived(runID, ticketID, string(agentType), result.Output, tokenIn, tokenOut, durationMs)
 
 		if !result.Success && result.Error != "" {
-			s.logger.LogError(runID, ticketID, string(agentType), result.Error)
+			_ = s.logger.LogError(runID, ticketID, string(agentType), result.Error)
 		}
 	}
 
@@ -266,7 +272,10 @@ func formatPromptSummary(agentType AgentType, data PromptData) string {
 		summary["extra_context"] = truncateForSummary(data.ExtraContext, 500)
 	}
 
-	jsonBytes, _ := json.MarshalIndent(summary, "", "  ")
+	jsonBytes, err := json.MarshalIndent(summary, "", "  ")
+	if err != nil {
+		return "{}"
+	}
 	return string(jsonBytes)
 }
 

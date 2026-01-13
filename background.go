@@ -39,11 +39,11 @@ type BackgroundAgentManager struct {
 }
 
 type backgroundAgent struct {
-	agentType       BackgroundAgentType
-	status          BackgroundAgentStatus
-	interval        time.Duration // How often the agent runs its cycle
-	runFunc         func(context.Context) error
-	mu              sync.RWMutex
+	agentType BackgroundAgentType
+	status    BackgroundAgentStatus
+	interval  time.Duration // How often the agent runs its cycle
+	runFunc   func(context.Context) error
+	mu        sync.RWMutex
 }
 
 // NewBackgroundAgentManager creates a new background agent manager.
@@ -123,7 +123,7 @@ func (m *BackgroundAgentManager) runAgentLoop(ctx context.Context, agent *backgr
 	for {
 		select {
 		case <-ctx.Done():
-			m.updateAgentStatus(agent, "Stopped", "Context cancelled")
+			m.updateAgentStatus(agent, "Stopped", "Context canceled")
 			return
 		case <-m.stopCh:
 			m.updateAgentStatus(agent, "Stopped", "Shutdown requested")
@@ -359,6 +359,8 @@ func (m *BackgroundAgentManager) analyzeTicketProgress(ticket *kanban.Ticket, st
 		findings.ProgressPercent = 80
 	case kanban.StatusInSec:
 		findings.ProgressPercent = 90
+	default:
+		// Other statuses don't contribute to progress estimation.
 	}
 
 	// Check for bugs
@@ -502,7 +504,7 @@ func (m *BackgroundAgentManager) healStuckDevTickets(state kanban.StateStore, ac
 	// Build a set of ticket IDs that have actively running agents
 	activeTickets := make(map[string]bool)
 	for _, run := range activeRuns {
-		if run.Status == "running" {
+		if run.Status == kanban.AgentRunStatusRunning {
 			activeTickets[run.TicketID] = true
 		}
 	}
@@ -524,11 +526,11 @@ func (m *BackgroundAgentManager) healStuckDevTickets(state kanban.StateStore, ac
 			"Self-healing stuck ticket: "+ticket.ID)
 
 		// Reset ticket back to READY for retry
-		state.UpdateTicketStatus(ticket.ID, kanban.StatusReady, "PM-SelfHeal",
+		_ = state.UpdateTicketStatus(ticket.ID, kanban.StatusReady, "PM-SelfHeal",
 			"Ticket was stuck in IN_DEV with no active agent - resetting for retry")
 
 		// Clear the assigned agent and worktree
-		state.ClearActivity(ticket.ID)
+		_ = state.ClearActivity(ticket.ID)
 
 		// Log the recovery
 		m.orchestrator.logger.Info("PM: Self-healed stuck ticket - reset to READY",
@@ -537,6 +539,6 @@ func (m *BackgroundAgentManager) healStuckDevTickets(state kanban.StateStore, ac
 
 	// Save state if any tickets were healed
 	if len(inDevTickets) > len(activeTickets) {
-		state.Save()
+		_ = state.Save()
 	}
 }

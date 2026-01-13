@@ -43,14 +43,14 @@ type Server struct {
 	shutdownOnce sync.Once
 
 	// Orchestrator management
-	orchestrator   *factory.Orchestrator
-	orchConfig     factory.Config
-	orchRepoRoot   string
-	orchCtx        context.Context
-	orchCancel     context.CancelFunc
-	orchRunning    bool
-	orchMu         sync.RWMutex
-	orchStartedAt  time.Time
+	orchestrator  *factory.Orchestrator
+	orchConfig    factory.Config
+	orchRepoRoot  string
+	orchCtx       context.Context
+	orchCancel    context.CancelFunc
+	orchRunning   bool
+	orchMu        sync.RWMutex
+	orchStartedAt time.Time
 }
 
 // NewServer creates a new dashboard server (without orchestrator management).
@@ -162,9 +162,9 @@ func (s *Server) StopOrchestrator() {
 
 // OrchestratorStatus represents the orchestrator's current status.
 type OrchestratorStatus struct {
-	Running   bool      `json:"running"`
-	StartedAt time.Time `json:"startedAt,omitempty"`
-	Uptime    string    `json:"uptime,omitempty"`
+	Running   bool             `json:"running"`
+	StartedAt time.Time        `json:"startedAt,omitempty"`
+	Uptime    string           `json:"uptime,omitempty"`
 	Metrics   *factory.Metrics `json:"metrics,omitempty"`
 }
 
@@ -188,6 +188,8 @@ func (s *Server) GetOrchestratorStatus() OrchestratorStatus {
 }
 
 // templateFuncs returns custom template functions.
+//
+//nolint:gocyclo // Template helper maps are inherently complex.
 func templateFuncs() template.FuncMap {
 	return template.FuncMap{
 		"contains": func(slice interface{}, item string) bool {
@@ -286,17 +288,17 @@ func templateFuncs() template.FuncMap {
 				return "dev"
 			}
 		},
-		// Markdown rendering
+		// Markdown rendering.
 		"markdown": func(s string) template.HTML {
 			var buf bytes.Buffer
 			if err := goldmark.Convert([]byte(s), &buf); err != nil {
-				return template.HTML(template.HTMLEscapeString(s))
+				return template.HTML(template.HTMLEscapeString(s)) //nolint:gosec // Explicitly escaped
 			}
-			return template.HTML(buf.String())
+			return template.HTML(buf.String()) //nolint:gosec // goldmark produces safe HTML
 		},
-		// Lucide icon rendering
+		// Lucide icon rendering.
 		"icon": func(name string) template.HTML {
-			return template.HTML(fmt.Sprintf(
+			return template.HTML(fmt.Sprintf( //nolint:gosec // Icon names are from internal code
 				`<svg class="icon icon-%s"><use href="/static/icons/lucide.svg#%s"></use></svg>`,
 				name, name))
 		},
@@ -360,10 +362,10 @@ func templateFuncs() template.FuncMap {
 			}
 			return string(tt)
 		},
-		// Title case string (accepts any type convertible to string)
+		// Title case string (accepts any type convertible to string).
 		"title": func(s any) string {
 			str := fmt.Sprintf("%v", s)
-			return strings.Title(strings.ToLower(str))
+			return strings.Title(strings.ToLower(str)) //nolint:staticcheck // Simple ASCII title case is sufficient for UI display
 		},
 		// Check if string is empty
 		"empty": func(s string) bool {

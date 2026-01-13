@@ -43,11 +43,11 @@ func (p *OpenAIProvider) Available() bool {
 
 // openAIRequest is the request format for OpenAI's chat completions API.
 type openAIRequest struct {
-	Model       string           `json:"model"`
-	Messages    []openAIMessage  `json:"messages"`
-	MaxTokens   int              `json:"max_tokens,omitempty"`
-	Temperature *float64         `json:"temperature,omitempty"`
-	Stop        []string         `json:"stop,omitempty"`
+	Model       string          `json:"model"`
+	Messages    []openAIMessage `json:"messages"`
+	MaxTokens   int             `json:"max_tokens,omitempty"`
+	Temperature *float64        `json:"temperature,omitempty"`
+	Stop        []string        `json:"stop,omitempty"`
 }
 
 type openAIMessage struct {
@@ -88,10 +88,7 @@ func (p *OpenAIProvider) CreateMessage(ctx context.Context, req *MessageRequest)
 		})
 	}
 	for _, msg := range req.Messages {
-		messages = append(messages, openAIMessage{
-			Role:    msg.Role,
-			Content: msg.Content,
-		})
+		messages = append(messages, openAIMessage(msg))
 	}
 
 	// Build request
