@@ -15,8 +15,8 @@ import (
 	"text/template"
 	"time"
 
-	"factory/agents/anthropic"
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/agents/anthropic"
+	"github.com/madhatter5501/Factory/kanban"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

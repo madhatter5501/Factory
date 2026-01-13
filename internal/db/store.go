@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"factory/agents/provider"
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/agents/provider"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // Store implements kanban state storage using SQLite.

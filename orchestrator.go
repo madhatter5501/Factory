@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"factory/agents"
-	"factory/git"
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/agents"
+	"github.com/madhatter5501/Factory/git"
+	"github.com/madhatter5501/Factory/kanban"
 
 	"github.com/google/uuid"
 )

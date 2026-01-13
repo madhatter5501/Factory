@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // AuditLogger provides audit logging for agent operations.

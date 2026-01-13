@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"factory/agents/anthropic"
-	"factory/agents/provider"
-	"factory/agents/rag"
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/agents/anthropic"
+	"github.com/madhatter5501/Factory/agents/provider"
+	"github.com/madhatter5501/Factory/agents/rag"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // ConfigStore interface for looking up provider configurations.

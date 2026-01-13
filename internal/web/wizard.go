@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/kanban"
 
 	"github.com/google/uuid"
 )

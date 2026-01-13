@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // BackgroundAgentType represents a type of always-running background agent.

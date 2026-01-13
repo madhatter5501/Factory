@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"factory/agents/anthropic"
+	"github.com/madhatter5501/Factory/agents/anthropic"
 )
 
 // AnthropicProvider wraps the Anthropic client to implement the Provider interface.

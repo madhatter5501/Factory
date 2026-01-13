@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"factory/agents/anthropic"
-	"factory/agents/rag"
+	"github.com/madhatter5501/Factory/agents/anthropic"
+	"github.com/madhatter5501/Factory/agents/rag"
 )
 
 // TokenUsage is an alias for anthropic.TokenUsage for external use.

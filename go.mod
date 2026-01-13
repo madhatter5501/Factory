@@ -1,4 +1,4 @@
-module factory
+module github.com/madhatter5501/Factory
 
 go 1.24.0
 

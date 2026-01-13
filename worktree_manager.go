@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // WorktreeStore extends StateStore for worktree management.

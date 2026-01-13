@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"time"
 
-	"factory/agents/provider"
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/agents/provider"
+	"github.com/madhatter5501/Factory/kanban"
 
 	"github.com/google/uuid"
 )

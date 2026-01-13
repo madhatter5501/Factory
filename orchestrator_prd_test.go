@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"factory/agents"
-	"factory/kanban"
+	"github.com/madhatter5501/Factory/agents"
+	"github.com/madhatter5501/Factory/kanban"
 )
 
 // --- Test Helpers ---

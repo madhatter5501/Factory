@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"factory"
-	"factory/internal/db"
-	"factory/kanban"
+	factory "github.com/madhatter5501/Factory"
+	"github.com/madhatter5501/Factory/internal/db"
+	"github.com/madhatter5501/Factory/kanban"
 
 	"github.com/yuin/goldmark"
 )
