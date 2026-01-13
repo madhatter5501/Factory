@@ -1,10 +1,10 @@
 <h1 align="center">
-  <br>
   Factory
-  <br>
 </h1>
 
-<h4 align="center">An AI-powered development pipeline orchestrator that coordinates autonomous agents to build software through a kanban workflow.</h4>
+<p align="center">
+  <strong>An AI-powered development pipeline orchestrator that coordinates autonomous agents to build software through a kanban workflow.</strong>
+</p>
 
 <p align="center">
   <a href="https://github.com/madhatter5501/Factory/actions/workflows/ci.yml">
@@ -52,31 +52,31 @@
 
 Factory transforms software development into an automated assembly line:
 
+```mermaid
+flowchart LR
+    subgraph Pipeline["Factory Pipeline"]
+        direction LR
+        B[Backlog<br><small>Ideas & Requests</small>]
+        R[Refine<br><small>PRD with Experts</small>]
+        D[Develop<br><small>Parallel Worktrees</small>]
+        V[Validate<br><small>QA + UX + Security</small>]
+        Done[Done<br><small>Auto-merge</small>]
+
+        B --> R --> D --> V --> Done
+    end
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                            FACTORY ORCHESTRATOR                               │
-├──────────────────────────────────────────────────────────────────────────────┤
-│                                                                               │
-│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
-│   │   BACKLOG   │───▶│   REFINE    │───▶│    DEV      │───▶│   REVIEW    │  │
-│   │             │    │             │    │             │    │             │  │
-│   │  Ideas &    │    │ PM creates  │    │ Parallel    │    │ QA + UX +   │  │
-│   │  Requests   │    │ PRD with    │    │ development │    │ Security    │  │
-│   │             │    │ experts     │    │ in worktrees│    │ validation  │  │
-│   └─────────────┘    └─────────────┘    └─────────────┘    └──────┬──────┘  │
-│                                                                    │         │
-│                              ┌────────────────────────────────────┘         │
-│                              ▼                                               │
-│                      ┌─────────────┐                                        │
-│                      │    DONE     │                                        │
-│                      │             │                                        │
-│                      │ Auto-merge  │                                        │
-│                      │ & cleanup   │                                        │
-│                      └─────────────┘                                        │
-│                                                                               │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  AGENTS:  🤖 PM  │  👩‍💻 Dev-Frontend  │  🔧 Dev-Backend  │  🧪 QA  │  🎨 UX  │  🔒 Security │
-└──────────────────────────────────────────────────────────────────────────────┘
+
+```mermaid
+flowchart TB
+    subgraph Agents["Agent Pool"]
+        direction LR
+        PM[PM]
+        DevF[Dev-Frontend]
+        DevB[Dev-Backend]
+        QA[QA]
+        UX[UX]
+        Sec[Security]
+    end
 ```
 
 ### Agent Types
@@ -252,36 +252,43 @@ Factory/
 
 ### Component Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              Orchestrator                                │
-│                         (orchestrator.go)                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│    ┌──────────────┐   ┌──────────────┐   ┌──────────────────────────┐  │
-│    │    Kanban    │   │   Worktree   │   │      Agent Spawner       │  │
-│    │    Store     │   │   Manager    │   │   (CLI / API modes)      │  │
-│    │   (SQLite)   │   │    (Git)     │   │                          │  │
-│    └──────┬───────┘   └──────┬───────┘   └────────────┬─────────────┘  │
-│           │                  │                        │                 │
-│           └──────────────────┴────────────────────────┘                 │
-│                              │                                          │
-│    ┌─────────────────────────┴─────────────────────────┐               │
-│    │                    Web Dashboard                   │               │
-│    │              (HTMX + Server-Sent Events)          │               │
-│    └───────────────────────────────────────────────────┘               │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Orchestrator["Orchestrator"]
+        direction TB
+
+        subgraph Core["Core Components"]
+            direction LR
+            KS[(Kanban Store<br><small>SQLite</small>)]
+            WM[Worktree Manager<br><small>Git</small>]
+            AS[Agent Spawner<br><small>CLI / API</small>]
+        end
+
+        subgraph Interface["Interface"]
+            WD[Web Dashboard<br><small>HTMX + SSE</small>]
+        end
+
+        Core --> Interface
+    end
 ```
 
 ### Kanban Workflow
 
-```
-BACKLOG → APPROVED → REFINING → READY → IN_DEV → IN_QA → IN_UX → IN_SEC → PM_REVIEW → DONE
-                         │
-                         ├──→ NEEDS_EXPERT (Domain consultation)
-                         │
-                         └──→ AWAITING_USER (Blocked on input)
+```mermaid
+flowchart LR
+    BACKLOG --> APPROVED
+    APPROVED --> REFINING
+    REFINING --> READY
+    REFINING -.-> NEEDS_EXPERT
+    REFINING -.-> AWAITING_USER
+    NEEDS_EXPERT -.-> REFINING
+    AWAITING_USER -.-> REFINING
+    READY --> IN_DEV
+    IN_DEV --> IN_QA
+    IN_QA --> IN_UX
+    IN_UX --> IN_SEC
+    IN_SEC --> PM_REVIEW
+    PM_REVIEW --> DONE
 ```
 
 | Status | Description |
@@ -363,7 +370,7 @@ This ensures requirements are thoroughly vetted before development resources are
 
 ## Contributing
 
-Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) before submitting PRs.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
