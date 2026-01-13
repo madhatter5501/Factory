@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: read
+  attestations: write
+  id-token: write
 
 env:
   GO_VERSION: '1.24'
@@ -166,6 +168,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
+      attestations: write
+      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -198,6 +202,19 @@ jobs:
           done
 
           ls -la
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          artifact-name: sbom.spdx.json
+          output-file: release/sbom.spdx.json
+          format: spdx-json
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'release/factory-*'
 
       - name: Generate changelog
         id: changelog

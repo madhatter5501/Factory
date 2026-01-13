@@ -1,0 +1,51 @@
+name: OpenSSF Scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday at 6am UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+# Required for uploading SARIF results
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for uploading SARIF results
+      security-events: write
+      # Required for OIDC token for Scorecard
+      id-token: write
+      # Required for reading repo contents
+      contents: read
+      # Required for Scorecard to detect repo info
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard analysis
+        uses: ossf/scorecard-action@v2.4.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # Publish results to OpenSSF REST API
+          publish_results: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
