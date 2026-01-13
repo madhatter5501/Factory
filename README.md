@@ -1,7 +1,5 @@
 <h1 align="center">
   <br>
-  <img src="https://raw.githubusercontent.com/madhatter5501/Factory/main/.github/assets/logo.png" alt="Factory" width="200">
-  <br>
   Factory
   <br>
 </h1>
@@ -35,10 +33,6 @@
   <a href="#configuration">Configuration</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#contributing">Contributing</a>
-</p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/madhatter5501/Factory/main/.github/assets/demo.gif" alt="Factory Demo" width="800">
 </p>
 
 ---
