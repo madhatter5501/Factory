@@ -509,7 +509,7 @@ func NewRAGRetriever(dbPath string) (*RAGRetriever, error) {
 
 	embedder, err := rag.NewEmbedder()
 	if err != nil {
-		store.Close()
+		_ = store.Close() // Ignore close error since we're returning the primary error
 		return nil, fmt.Errorf("failed to create embedder: %w", err)
 	}
 

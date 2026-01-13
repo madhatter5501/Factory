@@ -65,7 +65,7 @@ func (m *WorktreeManager) CreateWorktree(ticketID, branchName string) (string, e
 
 	// Ensure worktree directory exists
 	worktreeParent := filepath.Dir(worktreePath)
-	if err := os.MkdirAll(worktreeParent, 0755); err != nil {
+	if err := os.MkdirAll(worktreeParent, 0750); err != nil {
 		return "", fmt.Errorf("failed to create worktree directory: %w", err)
 	}
 

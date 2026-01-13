@@ -55,7 +55,7 @@ func NewVectorStore(dbPath string) (*VectorStore, error) {
 
 	store := &VectorStore{db: db}
 	if err := store.migrate(); err != nil {
-		db.Close()
+		_ = db.Close() // Ignore close error since we're returning the primary error
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"factory/agents/provider"
@@ -13,6 +14,9 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// safeExtensionRe matches valid file extensions (alphanumeric only).
+var safeExtensionRe = regexp.MustCompile(`^\.[a-zA-Z0-9]+$`)
 
 // getGlobalStatusData returns the system health and stats for the global status bar.
 // This should be included in all page data to render the persistent header.
@@ -421,7 +425,7 @@ func (s *Server) apiUploadAttachment(w http.ResponseWriter, r *http.Request) {
 
 	// Create uploads directory
 	uploadsDir := filepath.Join("uploads", "attachments", messageID)
-	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+	if err := os.MkdirAll(uploadsDir, 0750); err != nil {
 		s.logger.Error("Failed to create uploads directory", "error", err)
 		http.Error(w, "Failed to create uploads directory", http.StatusInternalServerError)
 		return
@@ -430,11 +434,18 @@ func (s *Server) apiUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	// Generate unique filename
 	attID := uuid.New().String()
 	ext := filepath.Ext(header.Filename)
+
+	// Validate extension to prevent path traversal (G304)
+	if ext != "" && !safeExtensionRe.MatchString(ext) {
+		http.Error(w, "Invalid file extension", http.StatusBadRequest)
+		return
+	}
+
 	storedFilename := attID + ext
-	filePath := filepath.Join(uploadsDir, storedFilename)
+	filePath := filepath.Join(uploadsDir, storedFilename) // #nosec G304 -- path constructed from validated UUID and extension
 
 	// Create the file
-	dst, err := os.Create(filePath)
+	dst, err := os.Create(filePath) // #nosec G304 -- path constructed from validated components
 	if err != nil {
 		s.logger.Error("Failed to create file", "error", err)
 		http.Error(w, "Failed to save file", http.StatusInternalServerError)
@@ -464,7 +475,9 @@ func (s *Server) apiUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.AddAttachment(att); err != nil {
 		s.logger.Error("Failed to save attachment", "error", err)
 		// Clean up the file
-		os.Remove(filePath)
+		if rmErr := os.Remove(filePath); rmErr != nil {
+			s.logger.Error("Failed to clean up file after attachment error", "error", rmErr, "path", filePath)
+		}
 		http.Error(w, "Failed to save attachment", http.StatusInternalServerError)
 		return
 	}

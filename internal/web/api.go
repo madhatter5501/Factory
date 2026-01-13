@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -15,6 +16,9 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// safeAgentTypeRe matches valid agent types (lowercase alphanumeric with hyphens).
+var safeAgentTypeRe = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 
 // apiGetBoard returns the full board state as JSON.
 func (s *Server) apiGetBoard(w http.ResponseWriter, r *http.Request) {
@@ -1261,9 +1265,14 @@ func (s *Server) apiGetAgentSystemPrompt(w http.ResponseWriter, r *http.Request)
 
 // readDefaultPrompt reads the default system prompt from the prompts directory.
 func readDefaultPrompt(agentType string) string {
+	// Validate agentType to prevent path traversal (G304)
+	if !safeAgentTypeRe.MatchString(agentType) {
+		return "" // Invalid agent type
+	}
+
 	// Try to read from the prompts directory
-	promptPath := fmt.Sprintf("prompts/%s.md", agentType)
-	content, err := os.ReadFile(promptPath)
+	promptPath := fmt.Sprintf("prompts/%s.md", agentType) // #nosec G304 -- agentType validated above
+	content, err := os.ReadFile(promptPath)              // #nosec G304 -- path constructed from validated agentType
 	if err != nil {
 		return "" // No default prompt file found
 	}
